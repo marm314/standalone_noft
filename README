@@ -1,0 +1,75 @@
+This is a standalone version of DoNOF code for performing RDMFT (NOFT) calculations.
+
+Developed by Dr. M. Rodríguez-Mayorga
+     email: marm3.14@gmail.com 
+
+ First version: 10/06/2021 VU Amsterdam 2021
+
+######################################################################################
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+######################################################################################
+
+This module is written in Fortran, it uses the format employed by ABINIT to define procedures, objects, etc. 
+This module is based on DoNOF code developed by Prof. Dr. M. Piris and Dr. I. Mitxelena 
+(See for more details https://github.com/DoNOF/DoNOFsw). 
+
+Initialization: simply call the subroutine run_noft 
+
+      subroutine run_noft(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,&
+      &  Ncoupled,Nbeta_elect,Nalpha_elect,iERItyp,imethocc,imethorb,itermax,iprintdmn,iprintints,&
+      &  itolLambda,ndiis,Enof,tolE,Vnn,NO_COEF,AOverlap,Occout,mo_ints,ofile_name,&
+      &  lowmemERI,restart,ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag)   ! Optional
+
+the initialization parameters are
+
+    INOF=PNOFi functional to use (HF, Muller[using pairing], PNOF5, and PNOF7)
+    Ista=Use PNOF7 (Ista=0) or PNOF7s (Ista=1)
+    NBF_occ=Number of orbitals that are occupied
+    Nfrozen=Number of frozen orbitals that remain with occ=2.0 
+    Npairs=Number of electron pairs
+    Ncoupled=Number of 'virtual' coupled orbitals per electron pair
+    Nbeta_elect=Number of beta electrons (N/2 for spin compensated systems)
+    Nalpha_elect=Number of beta electrons (N/2 for spin compensated systems)
+    iERItyp=Index organization used to decide the electron rep. integrals (ERIs) type ({ij|lk}, <ij|kl>, and (ik|jl))
+    imethocc=Method used for OCC opt. CG (1) or L-BFGS (2)
+    imethorb=Method used to opt. orbs. currently only F_diag (1)
+    itermax=Max. number of global iters
+    iprintdmn=Print opt. 1,2-DMNs 
+    iprintints=Print ERIs in MO basis
+    itolLambda=Tol for Lambda_pq - Lambda_qp* is 10**-itolLambda
+    ndiis=Numb. of iter. used in orb. opt. to call DIIS
+    tolE=Tolerance on energy convergence
+    Vnn=Fixed nuclear-nuclear interaction energy
+    NO_COEF=Guess NO coefs (probably HF ones). In the end, the optimized orbitals.
+    AOverlap= Overlap of atomic orbs. (matrix)
+    mo_ints=External subroutine that for given NO_COEF updates the hCORE and ERImol matrices
+    ofile_name=Name of the output file (recommended res.noft)
+    lowmemERI=Logical parameter to decided whether to store only (NBF_tot,NBF_occ,NBF_occ,NBF_occ) part of the nat. orb. ERIs
+    restart=Logical parameter to decided if this is a restart from previuos calc.
+    ireadGAMMAS, ireadOCC, ireadCOEF, ireadFdiag =Integer restart parameters that control the read of checkpoint files (TRUE=1)
+
+It is recommended to set at least itolLambda=5, and tolE=1e-9. The files m_rdmd.F90 and mtegd.F90 contain most of these parameters,
+and some recommended initial values. By default this module will perform a calc. using a perfect pairing. 
+
+Let us highlight that a subroutine called mo_ints must also be provided by the user. This subroutine is called by this module several times
+with a current set of nat. orbs. coefs. (NO_COEF). The mo_ints subroutine must update the ONEBODY and ERI arrays in the molecular basis. 
+This subroutine takes the following parameters 
+
+  subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,NO_COEF,ONEBODY,ERI)
+
+where all parameters were explained above except NBF_jkl. NBF_jkl=NBF_tot if ERI arrays uses (NBF_tot,NBF_tot,NBF_tot,NBF_tot), or
+NBF_jkl=NBF_occ if lowmemERI=TRUE and then the size of the ERI array is only (NBF_tot,NBF_occ,NBF_occ,NBF_occ).
+
+This module will run the whole optimization procedure and print all the details on ofile_name file. 
