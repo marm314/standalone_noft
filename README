@@ -21,9 +21,13 @@ Developed by Dr. M. Rodríguez-Mayorga
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ######################################################################################
 
-This module is written in Fortran, it uses the format employed by ABINIT to define procedures, objects, etc. 
-This module is based on DoNOF code developed by Prof. Dr. M. Piris and Dr. I. Mitxelena 
-(See https://github.com/DoNOF/DoNOFsw for more details). 
+This module is written in Fortran, it uses the format employed by ABINIT to define procedures, objects, etc.
+It is based on DoNOF code developed by Prof. Dr. M. Piris and Dr. I. Mitxelena
+(See https://github.com/DoNOF/DoNOFsw for more details).
+
+Compilation:  
+
+Its compilation requires LAPACK (or MKL). The order to compilate all files can be found in the Makefile. 
 
 Initialization: simply call the subroutine run_noft 
 
@@ -73,4 +77,9 @@ This subroutine takes the following parameters
 where all parameters were explained above except NBF_jkl. NBF_jkl=NBF_tot if ERI arrays uses (NBF_tot,NBF_tot,NBF_tot,NBF_tot), or
 NBF_jkl=NBF_occ if lowmemERI=TRUE and then the size of the ERI array is only (NBF_tot,NBF_occ,NBF_occ,NBF_occ).
 
-This module will run the whole optimization procedure and print all the details on ofile_name file. 
+This module will run the whole optimization procedure and print all the details on ofile_name file.
+
+Example: 
+ 
+ See the test included. There we use use the Hubbard model to test this module. There we illustrate how to initialize the module and
+ how to build the mo_ints subroutine
