@@ -5,6 +5,8 @@ Developed by Dr. M. Rodriguez-Mayorga
 
  First version: 10/06/2021 VU Amsterdam 2021
 
+License:
+
 ######################################################################################
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -21,15 +23,17 @@ Developed by Dr. M. Rodriguez-Mayorga
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ######################################################################################
 
-This module is written in Fortran, it uses the format employed by ABINIT to define procedures, objects, etc.
+This module is written in Fortran, it uses the formats employed in ABINIT code to structure the files, define procedures and objects, etc.
 It is based on DoNOF code developed by Prof. Dr. M. Piris and Dr. I. Mitxelena
 (See https://github.com/DoNOF/DoNOFsw for more details).
 
 Compilation:  
 
-Its compilation requires LAPACK (or MKL). The order to compilate all files can be found in the Makefile. 
+Its compilation will require LAPACK (or MKL for ifort). The order to follow when compilating all files can be found in the Makefile. 
 
-Initialization: simply call the subroutine run_noft 
+Initialization: 
+
+By calling the subroutine run_noft 
 
       subroutine run_noft(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,&
       &  Ncoupled,Nbeta_elect,Nalpha_elect,iERItyp,imethocc,imethorb,itermax,iprintdmn,iprintints,&
@@ -38,7 +42,7 @@ Initialization: simply call the subroutine run_noft
 
 the initialization parameters are
 
-    INOF=PNOFi functional to use (HF, Muller[using pairing], PNOF5, and PNOF7)
+    INOF=PNOFi functional to use (HF=0, Muller[using pairing]=-1, PNOF5=5, and PNOF7=7)
     Ista=Use PNOF7 (Ista=0) or PNOF7s (Ista=1)
     NBF_occ=Number of orbitals that are occupied
     Nfrozen=Number of frozen orbitals that remain with occ=2.0 
@@ -65,21 +69,25 @@ the initialization parameters are
     restart=Logical parameter to decided if this is a restart from previuos calc.
     ireadGAMMAS, ireadOCC, ireadCOEF, ireadFdiag =Integer restart parameters that control the read of checkpoint files (TRUE=1)
 
-It is recommended to set at least itolLambda=5, and tolE=1e-9. The files m_rdmd.F90 and mtegd.F90 contain most of these parameters,
-and some recommended initial values. By default this module will perform a calc. using a perfect pairing. 
+It is recommended to set at least itolLambda=5, and tolE=1e-9. The files m_rdmd.F90 and m_integd.F90 contain most of these parameters,
+and some recommended initial values. By default the module uses a perfect pairing approximation, which can be tuned with the Ncoupled parameter. 
 
-Let us highlight that a subroutine called mo_ints must also be provided by the user. This subroutine is called by this module several times
-with a current set of nat. orbs. coefs. (NO_COEF). The mo_ints subroutine must update the ONEBODY and ERI arrays in the molecular basis. 
+Important! A subroutine called mo_ints must also be provided by the user. This subroutine is called by this module several times
+with a set of nat. orbs. coefs. (NO_COEF). The mo_ints subroutine updates the ONEBODY and ERI arrays (in the molecular/natural orb. basis). 
 This subroutine takes the following parameters 
 
   subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,NO_COEF,ONEBODY,ERI)
 
-where all parameters were explained above except NBF_jkl. NBF_jkl=NBF_tot if ERI arrays uses (NBF_tot,NBF_tot,NBF_tot,NBF_tot), or
-NBF_jkl=NBF_occ if lowmemERI=TRUE and then the size of the ERI array is only (NBF_tot,NBF_occ,NBF_occ,NBF_occ).
+where all parameters were explained above except NBF_jkl. The NBF_jkl=NBF_tot if the ERI array uses (NBF_tot,NBF_tot,NBF_tot,NBF_tot), or
+NBF_jkl=NBF_occ if lowmemERI=TRUE and the size of the ERI array is only (NBF_tot,NBF_occ,NBF_occ,NBF_occ).
 
-This module will run the whole optimization procedure and print all the details on ofile_name file.
+This module runs the whole optimization procedure and prints all the details on the file: ofile_name.
 
 Example: 
  
- See the test included. There we use use the Hubbard model to test this module. There we illustrate how to initialize the module and
- how to build the mo_ints subroutine
+ See the test included. There we use test this module using the Hubbard model; we illustrate how to initialize the module and
+ how to build a mo_ints subroutine
+
+Warning: 
+
+  The current version does not support spin-uncompensated systems (under development).
