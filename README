@@ -23,7 +23,7 @@ Developed by Dr. M. Rodríguez-Mayorga
 
 This module is written in Fortran, it uses the format employed by ABINIT to define procedures, objects, etc. 
 This module is based on DoNOF code developed by Prof. Dr. M. Piris and Dr. I. Mitxelena 
-(See for more details https://github.com/DoNOF/DoNOFsw). 
+(See https://github.com/DoNOF/DoNOFsw for more details). 
 
 Initialization: simply call the subroutine run_noft 
 
