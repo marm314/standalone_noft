@@ -12,7 +12,10 @@ all:
 	gfortran -c m_optocc.F90
 	gfortran -c m_optorb.F90
 	gfortran -c m_noft_driver.F90
+test:
+	make all
+	gfortran -llapack -lblas *.o test.F90 -o test.x
 clean:
-	/bin/rm -rf *.o *.mod
+	/bin/rm -rf *.o *.mod test.x
 tar:
 	tar -cvf module_noft.tar *F90 *F README
