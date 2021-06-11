@@ -143,32 +143,31 @@ subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,NO_COEF,ONEBODY,ERImol)
  real(dp),dimension(NBF_tot,NBF_tot),intent(inout)::ONEBODY
  real(dp),dimension(NBF_tot,NBF_jkl,NBF_jkl,NBF_jkl),intent(inout)::ERImol
  real(dp),dimension(NBF_tot,NBF_tot),intent(in)::NO_COEF
- real(dp),allocatable,dimension(:,:)::SITE_ONEBODY,TMP_ONEBODY
- real(dp),allocatable,dimension(:,:,:,:)::SITE_ERI
+ real(dp),allocatable,dimension(:,:)::TMP_ONEBODY
  integer::isite,isite1
 
- allocate(TMP_ONEBODY(NBF_tot,NBF_tot),SITE_ONEBODY(NBF_tot,NBF_tot))
- allocate(SITE_ERI(NBF_tot,NBF_tot,NBF_tot,NBF_tot))
+ allocate(TMP_ONEBODY(NBF_tot,NBF_tot))
 
  ! Compute ONEBODY
- SITE_ONEBODY=0.0d0
+ ONEBODY=0.0d0
  do isite=1,NBF_tot
   do isite1=1,NBF_tot
    if(isite/=isite1) then
-    SITE_ONEBODY(isite,isite1)=-t
+    ONEBODY(isite,isite1)=-t
    endif
   enddo
  enddo
- TMP_ONEBODY=matmul(SITE_ONEBODY,NO_COEF)
+ TMP_ONEBODY=matmul(ONEBODY,NO_COEF)
  ONEBODY=matmul(transpose(NO_COEF),TMP_ONEBODY)
 
  ! Compute ERImol
- SITE_ERI=0.0d0
+ ERImol=0.0d0
  do isite=1,NBF_tot
-  SITE_ERI(isite,isite,isite,isite)=U
+  ERImol(isite,isite,isite,isite)=U
  enddo
- ERImol=SITE_ERI
  call transformERI(NBF_tot,NO_COEF,ERImol)
+
+ deallocate(TMP_ONEBODY)
 
 end subroutine mo_ints
 !!***
