@@ -26,7 +26,8 @@ end module m_hubbard
 !!  noft_hubbard
 !!
 !! FUNCTION
-!!  Testing the module using PNOF7 (equal to PNOF5 in this case) for 2-sites Hubbard model with t=-1 and U=5.
+!!  Testing the module using NOFTs (in perfect pairing) for N-sites Hubbard model.
+!!  For PNOF7 we use PNOF7 not PNOF7s
 !!
 !! PARENTS
 !!
@@ -39,9 +40,9 @@ program noft_hubbard
  use m_hubbard
  use m_noft_driver
  implicit none
- integer::INOF,Ista=1,NBF_tot,NBF_occ,Nfrozen,Npairs
+ integer::INOF,Ista=0,NBF_tot,NBF_occ,Nfrozen,Npairs
  integer::Ncoupled=1,Nbeta_elect,Nalpha_elect,iERItyp=1
- integer::imethocc=1,imethorb=1,itermax=1000,iprintdmn=0,iprintints=0
+ integer::imethocc=1,imethorb=1,itermax=10000,iprintdmn=0,iprintints=0
  integer::itolLambda=5,ndiis=5
  real(dp)::Enof,tolE=1.0d-9,Vnn=0.0d0
  real(dp),allocatable,dimension(:)::Occ,Work
