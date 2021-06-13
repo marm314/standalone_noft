@@ -148,9 +148,8 @@ subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,NO_COEF,ONEBODY,ERImol,ERImolv)
  real(dp),allocatable,dimension(:,:)::TMP_ONEBODY
  integer::isite,isite1
 
- allocate(TMP_ONEBODY(NBF_tot,NBF_tot))
-
  ! Compute ONEBODY (initially SITE_ONEBODY, in the end ONEBODY)
+ allocate(TMP_ONEBODY(NBF_tot,NBF_tot))
  ONEBODY=0.0d0
  do isite=1,NBF_tot
   do isite1=1,NBF_tot
@@ -161,15 +160,16 @@ subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,NO_COEF,ONEBODY,ERImol,ERImolv)
  enddo
  TMP_ONEBODY=matmul(ONEBODY,NO_COEF)
  ONEBODY=matmul(transpose(NO_COEF),TMP_ONEBODY)
+ deallocate(TMP_ONEBODY)
 
  ! Compute ERImol (initially SITE_ERI, in the end ERImol)
- ERImol=0.0d0
- do isite=1,NBF_tot
-  ERImol(isite,isite,isite,isite)=U
- enddo
- call transformERI(NBF_tot,NO_COEF,ERImol) ! Site -> Nat. orbs.
-
- deallocate(TMP_ONEBODY)
+ if(present(ERImol)) then
+  ERImol=0.0d0
+  do isite=1,NBF_tot
+   ERImol(isite,isite,isite,isite)=U
+  enddo
+  call transformERI(NBF_tot,NO_COEF,ERImol) ! Site -> Nat. orbs.
+ endif
 
 end subroutine mo_ints
 !!***
