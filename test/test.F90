@@ -148,6 +148,7 @@ subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,NO_COEF,ONEBODY,ERImol,ERImolv)
  real(dp),allocatable,dimension(:,:)::TMP_ONEBODY
  integer::isite,isite1,isitev,NBF2,NBF3,NBF4
 
+ !write(*,*) ' Starting transformation of hCORE and ERI integrals'
  ! Compute ONEBODY (initially SITE_ONEBODY, in the end ONEBODY)
  allocate(TMP_ONEBODY(NBF_tot,NBF_tot))
  ONEBODY=0.0d0
@@ -183,6 +184,7 @@ subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,NO_COEF,ONEBODY,ERImol,ERImolv)
   enddo
   call transformERIv(NBF_tot,NO_COEF,ERImolv) ! Site -> Nat. orbs.
  endif
+ !write(*,*) ' Transformation of hCORE and ERI integrals finished'
 
 end subroutine mo_ints
 !!***
