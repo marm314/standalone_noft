@@ -41,7 +41,7 @@ program noft_hubbard
  use m_noft_driver
  implicit none
  integer::INOF,Ista=0,NBF_tot,NBF_occ,Nfrozen,Npairs
- integer::Ncoupled=1,Nbeta_elect,Nalpha_elect,iERItyp=1
+ integer::Ncoupled=1,Nbeta_elect,Nalpha_elect,iERItyp=-1
  integer::imethocc=1,imethorb=1,itermax=10000,iprintdmn=0,iprintints=0
  integer::itolLambda=5,ndiis=5
  real(dp)::Enof,tolE=1.0d-9,Vnn=0.0d0
@@ -146,7 +146,7 @@ subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,NO_COEF,ONEBODY,ERImol,ERImolv)
  real(dp),dimension(NBF_tot*NBF_jkl*NBF_jkl*NBF_jkl),optional,intent(inout)::ERImolv
  real(dp),dimension(NBF_tot,NBF_tot),intent(in)::NO_COEF
  real(dp),allocatable,dimension(:,:)::TMP_ONEBODY
- integer::isite,isite1
+ integer::isite,isite1,isitev,NBF2,NBF3,NBF4
 
  ! Compute ONEBODY (initially SITE_ONEBODY, in the end ONEBODY)
  allocate(TMP_ONEBODY(NBF_tot,NBF_tot))
@@ -169,6 +169,19 @@ subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,NO_COEF,ONEBODY,ERImol,ERImolv)
    ERImol(isite,isite,isite,isite)=U
   enddo
   call transformERI(NBF_tot,NO_COEF,ERImol) ! Site -> Nat. orbs.
+ endif
+
+ ! Compute ERImol (initially SITE_ERI, in the end ERImolv). Here NBF_jkl=NBF_tot
+ if(present(ERImolv)) then
+  ERImolv=0.0d0
+  do isite=1,NBF_tot
+   NBF2=NBF_tot
+   NBF3=NBF2*NBF_jkl
+   NBF4=NBF3*NBF_jkl
+   isitev=(isite-1)*(1+NBF2+NBF3+NBF4)+1
+   ERImolv(isitev)=U
+  enddo
+  call transformERIv(NBF_tot,NO_COEF,ERImolv) ! Site -> Nat. orbs.
  endif
 
 end subroutine mo_ints
@@ -211,14 +224,14 @@ subroutine transformERI(NBF,NO_COEF,ERImol)
     enddo
    enddo
   enddo
-  enddo
+ enddo
   ! K -> R
-  do i=1,NBF
-   do j=1,NBF
-    do m=1,NBF
-     do l=1,NBF
-      ERImol(i,j,m,l)=0.0d0
-      do k=1,NBF
+ do i=1,NBF
+  do j=1,NBF
+   do m=1,NBF
+    do l=1,NBF
+     ERImol(i,j,m,l)=0.0d0
+     do k=1,NBF
       ERImol(i,j,m,l)=ERImol(i,j,m,l)+NO_COEF(k,m)*TMP_ERI(i,j,k,l)
      enddo
     enddo
@@ -254,4 +267,113 @@ subroutine transformERI(NBF,NO_COEF,ERImol)
  deallocate(TMP_ERI)
 
 end subroutine transformERI
+!!***
+
+!!***
+!!****f* DoNOF/transformERIv
+!! NAME
+!! transformERIv
+!!
+!! FUNCTION
+!!  Transform the ERI from SITE basis to the 'molecular basis'
+!!
+!! INPUTS
+!!
+!! OUTPUT
+!!
+!! PARENTS
+!!  
+!! CHILDREN
+!!
+!! SOURCE
+
+subroutine transformERIv(NBF,NO_COEF,ERImolv)
+ implicit none
+ integer,intent(in)::NBF
+ double precision,dimension(NBF*NBF*NBF*NBF),intent(inout)::ERImolv
+ double precision,dimension(NBF,NBF),intent(in)::NO_COEF
+ double precision,dimension(:),allocatable::TMP_ERIv
+ integer::i,j,k,l,m,ii,jj,kk,ll,mm,NBF2,NBF3,NBF4
+ NBF2=NBF
+ NBF3=NBF2*NBF
+ NBF4=NBF3*NBF
+ allocate(TMP_ERIv(NBF*NBF*NBF*NBF))
+ do i=1,NBF
+  ii=i-1
+  do j=1,NBF
+   jj=j-1
+   do k=1,NBF
+    kk=k-1
+    do m=1,NBF
+     mm=m-1
+     TMP_ERIv(ii+jj*NBF2+kk*NBF3+mm*NBF4+1)=0.0d0
+     do l=1,NBF
+      ll=l-1
+      TMP_ERIv(ii+jj*NBF2+kk*NBF3+mm*NBF4+1)=TMP_ERIv(ii+jj*NBF2+kk*NBF3+mm*NBF4+1)&
+        &        +NO_COEF(l,m)*ERImolv(ii+jj*NBF2+kk*NBF3+ll*NBF4+1)
+     enddo
+    enddo
+   enddo
+  enddo
+ enddo
+  ! K -> R
+ do i=1,NBF
+  ii=i-1
+  do j=1,NBF
+   jj=j-1
+   do m=1,NBF
+    mm=m-1
+    do l=1,NBF
+     ll=l-1
+     ERImolv(ii+jj*NBF2+mm*NBF3+ll*NBF4+1)=0.0d0
+     do k=1,NBF
+      kk=k-1
+      ERImolv(ii+jj*NBF2+mm*NBF3+ll*NBF4+1)=ERImolv(ii+jj*NBF2+mm*NBF3+ll*NBF4+1)&
+        &       +NO_COEF(k,m)*TMP_ERIv(ii+jj*NBF2+kk*NBF3+ll*NBF4+1)
+     enddo
+    enddo
+   enddo
+  enddo
+ enddo
+ ! J -> Q
+ do i=1,NBF
+  ii=i-1
+  do m=1,NBF
+   mm=m-1
+   do k=1,NBF
+    kk=k-1
+    do l=1,NBF
+     ll=l-1
+     TMP_ERIv(ii+mm*NBF2+kk*NBF3+ll*NBF4+1)=0.0d0
+     do j=1,NBF
+      jj=j-1
+      TMP_ERIv(ii+mm*NBF2+kk*NBF3+ll*NBF4+1)=TMP_ERIv(ii+mm*NBF2+kk*NBF3+ll*NBF4+1)&
+       &         +NO_COEF(j,m)*ERImolv(ii+jj*NBF2+kk*NBF3+ll*NBF4+1)
+     enddo
+    enddo
+   enddo
+  enddo
+ enddo
+ ! I -> P
+ do m=1,NBF
+  mm=m-1
+  do j=1,NBF
+   jj=j-1
+   do k=1,NBF
+    kk=k-1
+    do l=1,NBF
+     ll=l-1
+     ERImolv(mm+jj*NBF2+kk*NBF3+ll*NBF4+1)=0.0d0
+     do i=1,NBF
+      ii=i-1
+      ERImolv(mm+jj*NBF2+kk*NBF3+ll*NBF4+1)=ERImolv(mm+jj*NBF2+kk*NBF3+ll*NBF4+1)&
+       &        +NO_COEF(i,m)*TMP_ERIv(ii+jj*NBF2+kk*NBF3+ll*NBF4+1)
+     enddo
+    enddo
+   enddo
+  enddo
+ enddo
+ deallocate(TMP_ERIv)
+
+end subroutine transformERIv
 !!***
