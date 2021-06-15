@@ -67,8 +67,8 @@ the initialization parameters are
     ofile_name=Name of the output file (recommended res.noft)
     lowmemERI=Logical parameter to decided whether to store only (NBF_tot,NBF_occ,NBF_occ,NBF_occ) part of the nat. orb. ERIs
     restart=Logical parameter to decided if this is a restart from previuos calc.
-    ireadGAMMAS, ireadOCC, ireadCOEF, ireadFdiag =Integer restart parameters that control the read of checkpoint files (TRUE=1)
-
+    ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,iNOTupdateOCC,iNOTupdateORB=Integer restart parameters that control the read of checkpoint files 
+                                                                          and the optimization of OCCs and/or ORBs (true=1)    
 It is recommended to set at least itolLambda=5, and tolE=1e-9. The files m_rdmd.F90 and m_integd.F90 contain most of these parameters,
 and some recommended initial values. By default the module uses a perfect pairing approximation, which can be tuned with the Ncoupled parameter. 
 
