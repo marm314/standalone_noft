@@ -490,7 +490,7 @@ subroutine dm2_power(RDMd,Docc_gamma,sqrt_occ,Dsqrt_occ_gamma,DM2_IIII,DM2_J,DM2
 !          DM2(iorb,iorb,iorb,iorb)=2*OCC(iorb)*OCC(iorb)-OCC(iorb)
 !-----------------------------------------------------------------------
  do iorb=1,RDMd%NBF_occ
-  DM2_IIII(iorb)=2.0d0*RDMd%occ(iorb)*RDMd%occ(iorb)-RDMd%occ(iorb)**(2.0d0*RDMd%Lpower)
+  DM2_IIII(iorb)=2.0d0*RDMd%occ(iorb)*RDMd%occ(iorb)-(RDMd%occ(iorb)**(2.0d0*RDMd%Lpower))
   DM2_J(iorb,iorb)=0.0d0
   DM2_K(iorb,iorb)=0.0d0
   RDMd%Dfni_ni(iorb)=4.0d0*RDMd%occ(iorb)-2.0d0*RDMd%Lpower*(RDMd%occ(iorb)**(2.0d0*RDMd%Lpower-1.0d0))
