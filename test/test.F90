@@ -91,6 +91,8 @@ program noft_hubbard
   NO_COEF(isite,isite1)=-t
   NO_COEF(isite1,isite)=-t
  enddo
+ NO_COEF(1,NBF_tot)=-t
+ NO_COEF(NBF_tot,1)=-t
  ! Use as initial GUESS for the Nat. orb. coefs. the Hcore matrix
  lwork=-1
  call DSYEV('V','L',NBF_tot,NO_COEF,NBF_tot,Occ,Work,lwork,info)
@@ -155,6 +157,8 @@ subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,NO_COEF,ONEBODY,ERImol,ERImolv)
   ONEBODY(isite,isite1)=-t
   ONEBODY(isite1,isite)=-t
  enddo
+ ONEBODY(1,NBF_tot)=-t
+ ONEBODY(NBF_tot,1)=-t
  TMP_ONEBODY=matmul(ONEBODY,NO_COEF)
  ONEBODY=matmul(transpose(NO_COEF),TMP_ONEBODY)
  deallocate(TMP_ONEBODY)
