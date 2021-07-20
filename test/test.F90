@@ -86,12 +86,10 @@ program noft_hubbard
  enddo
  ! Hcore (saved in NO_COEF initially before the diagonalization)
  NO_COEF=0.0d0
- do isite=1,NBF_tot
-  do isite1=1,NBF_tot
-   if(isite/=isite1) then
-    NO_COEF(isite,isite1)=-t
-   endif
-  enddo
+ do isite=1,NBF_tot-1
+  isite1=isite+1
+  NO_COEF(isite,isite1)=-t
+  NO_COEF(isite1,isite)=-t
  enddo
  ! Use as initial GUESS for the Nat. orb. coefs. the Hcore matrix
  lwork=-1
@@ -152,12 +150,10 @@ subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,NO_COEF,ONEBODY,ERImol,ERImolv)
  ! Compute ONEBODY (initially SITE_ONEBODY, in the end ONEBODY)
  allocate(TMP_ONEBODY(NBF_tot,NBF_tot))
  ONEBODY=0.0d0
- do isite=1,NBF_tot
-  do isite1=1,NBF_tot
-   if(isite/=isite1) then
-    ONEBODY(isite,isite1)=-t
-   endif
-  enddo
+ do isite=1,NBF_tot-1
+  isite1=isite+1
+  ONEBODY(isite,isite1)=-t
+  ONEBODY(isite1,isite)=-t
  enddo
  TMP_ONEBODY=matmul(ONEBODY,NO_COEF)
  ONEBODY=matmul(transpose(NO_COEF),TMP_ONEBODY)
