@@ -29,7 +29,8 @@ It is based on DoNOF code developed by Prof. Dr. M. Piris and Dr. I. Mitxelena
 
 Compilation:  
 
-Its compilation will require LAPACK (or MKL for ifort). The order to follow when compilating all files can be found in the Makefile. 
+Its compilation will require LAPACK (or MKL for ifort). The order to follow when compilating all files can be found in the Makefile.
+Notice that initially the script gitversion.sh must be run (see the Makefile) to produce the m_gitver.F90 source file. 
 
 Initialization: 
 
