@@ -16,6 +16,6 @@ all:
 	gfortran -Wall -c m_optorb.F90
 	gfortran -Wall -c m_noft_driver.F90
 clean:
-	/bin/rm -rf *.o *.mod
+	/bin/rm -rf *.o *.mod m_gitver.F90
 tar:
 	tar -cvf module_noft.tar *F90 *F README test
