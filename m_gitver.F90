@@ -58,7 +58,7 @@ character(100),intent(inout)::sha
 !arrays 
 !************************************************************************ 
  
-  write(sha,'(a)')'e5da8cf748c0a981872654f5805e946e31a98261'
+  write(sha,'(a)')'7d0e8382543a319cea3ce81c5744651837906998'
  
 end subroutine gitversion
 !!***
