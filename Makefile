@@ -1,4 +1,7 @@
 all:
+	chmod 777 gitversion.sh 
+	./gitversion.sh 
+	gfortran -Wall -c m_gitver.F90
 	gfortran -Wall -c m_nofoutput.F90
 	gfortran -Wall -c m_vars.F90
 	gfortran -c m_cg.F90
@@ -13,6 +16,6 @@ all:
 	gfortran -Wall -c m_optorb.F90
 	gfortran -Wall -c m_noft_driver.F90
 clean:
-	/bin/rm -rf *.o *.mod
+	/bin/rm -rf *.o *.mod m_gitver.F90
 tar:
 	tar -cvf module_noft.tar *F90 *F README test
