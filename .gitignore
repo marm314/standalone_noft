@@ -27,5 +27,5 @@ m_optorb.mod
 m_rdmd.mod
 m_vars.mod
 m_gitver.F90
-m_hubbard.mod
-test.x
+test/m_hubbard.mod
+tes/test.x
