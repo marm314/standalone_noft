@@ -17,7 +17,7 @@ all:
 	gfortran -O3 -c ../m_noft_driver.F90
 	gfortran -O3 -llapack -lblas *.o test.F90 -o test.x
 clean:
-	/bin/rm -rf *.o *.mod test.x m_gitver.F90
+	/bin/rm -rf *.o *.mod test.x
 
 cleannoft:
 	/bin/rm -rf CANON_COEF  DYSON_COEF  F_DIAG  fort.2  GAMMAS NO_COEF  NO_COEF_BIN hubbard.noft
