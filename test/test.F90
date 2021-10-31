@@ -215,11 +215,12 @@ subroutine transformERI(NBF,NO_COEF,ERImol)
  double precision,dimension(:,:,:,:),allocatable::TMP_ERI
  integer::i,j,k,l,m
  allocate(TMP_ERI(NBF,NBF,NBF,NBF))
+ ! L -> S
+ TMP_ERI=0.0d0
  do i=1,NBF
   do j=1,NBF
    do k=1,NBF
     do m=1,NBF
-     TMP_ERI(i,j,k,m)=0.0d0
      do l=1,NBF
       TMP_ERI(i,j,k,m)=TMP_ERI(i,j,k,m)+NO_COEF(l,m)*ERImol(i,j,k,l)
      enddo
@@ -227,12 +228,12 @@ subroutine transformERI(NBF,NO_COEF,ERImol)
    enddo
   enddo
  enddo
-  ! K -> R
+ ! K -> R
+ ERImol=0.0d0
  do i=1,NBF
   do j=1,NBF
    do m=1,NBF
     do l=1,NBF
-     ERImol(i,j,m,l)=0.0d0
      do k=1,NBF
       ERImol(i,j,m,l)=ERImol(i,j,m,l)+NO_COEF(k,m)*TMP_ERI(i,j,k,l)
      enddo
@@ -241,11 +242,11 @@ subroutine transformERI(NBF,NO_COEF,ERImol)
   enddo
  enddo
  ! J -> Q
+ TMP_ERI=0.0d0
  do i=1,NBF
   do m=1,NBF
    do k=1,NBF
     do l=1,NBF
-     TMP_ERI(i,m,k,l)=0.0d0
      do j=1,NBF
       TMP_ERI(i,m,k,l)=TMP_ERI(i,m,k,l)+NO_COEF(j,m)*ERImol(i,j,k,l)
      enddo
@@ -254,11 +255,11 @@ subroutine transformERI(NBF,NO_COEF,ERImol)
   enddo
  enddo
  ! I -> P
+ ERImol=0.0d0
  do m=1,NBF
   do j=1,NBF
    do k=1,NBF
     do l=1,NBF
-     ERImol(m,j,k,l)=0.0d0
      do i=1,NBF
       ERImol(m,j,k,l)=ERImol(m,j,k,l)+NO_COEF(i,m)*TMP_ERI(i,j,k,l)
      enddo
@@ -300,6 +301,8 @@ subroutine transformERIv(NBF,NO_COEF,ERImolv)
  NBF3=NBF2*NBF
  NBF4=NBF3*NBF
  allocate(TMP_ERIv(NBF*NBF*NBF*NBF))
+ ! L -> S
+ TMP_ERIv=0.0d0
  do i=1,NBF
   ii=i-1
   do j=1,NBF
@@ -308,7 +311,6 @@ subroutine transformERIv(NBF,NO_COEF,ERImolv)
     kk=k-1
     do m=1,NBF
      mm=m-1
-     TMP_ERIv(ii+jj*NBF2+kk*NBF3+mm*NBF4+1)=0.0d0
      do l=1,NBF
       ll=l-1
       TMP_ERIv(ii+jj*NBF2+kk*NBF3+mm*NBF4+1)=TMP_ERIv(ii+jj*NBF2+kk*NBF3+mm*NBF4+1)&
@@ -318,7 +320,8 @@ subroutine transformERIv(NBF,NO_COEF,ERImolv)
    enddo
   enddo
  enddo
-  ! K -> R
+ ! K -> R
+ ERImolv=0.0d0
  do i=1,NBF
   ii=i-1
   do j=1,NBF
@@ -327,7 +330,6 @@ subroutine transformERIv(NBF,NO_COEF,ERImolv)
     mm=m-1
     do l=1,NBF
      ll=l-1
-     ERImolv(ii+jj*NBF2+mm*NBF3+ll*NBF4+1)=0.0d0
      do k=1,NBF
       kk=k-1
       ERImolv(ii+jj*NBF2+mm*NBF3+ll*NBF4+1)=ERImolv(ii+jj*NBF2+mm*NBF3+ll*NBF4+1)&
@@ -338,6 +340,7 @@ subroutine transformERIv(NBF,NO_COEF,ERImolv)
   enddo
  enddo
  ! J -> Q
+ TMP_ERIv=0.0d0
  do i=1,NBF
   ii=i-1
   do m=1,NBF
@@ -346,7 +349,6 @@ subroutine transformERIv(NBF,NO_COEF,ERImolv)
     kk=k-1
     do l=1,NBF
      ll=l-1
-     TMP_ERIv(ii+mm*NBF2+kk*NBF3+ll*NBF4+1)=0.0d0
      do j=1,NBF
       jj=j-1
       TMP_ERIv(ii+mm*NBF2+kk*NBF3+ll*NBF4+1)=TMP_ERIv(ii+mm*NBF2+kk*NBF3+ll*NBF4+1)&
@@ -357,6 +359,7 @@ subroutine transformERIv(NBF,NO_COEF,ERImolv)
   enddo
  enddo
  ! I -> P
+ ERImolv=0.0d0
  do m=1,NBF
   mm=m-1
   do j=1,NBF
@@ -365,7 +368,6 @@ subroutine transformERIv(NBF,NO_COEF,ERImolv)
     kk=k-1
     do l=1,NBF
      ll=l-1
-     ERImolv(mm+jj*NBF2+kk*NBF3+ll*NBF4+1)=0.0d0
      do i=1,NBF
       ii=i-1
       ERImolv(mm+jj*NBF2+kk*NBF3+ll*NBF4+1)=ERImolv(mm+jj*NBF2+kk*NBF3+ll*NBF4+1)&
