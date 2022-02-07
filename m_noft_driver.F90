@@ -237,7 +237,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
   call RDMd%print_gammas()
 
   ! Check convergence
-  if(abs(Energy-Energy_old)<ELAGd%tolE) then
+  if(dabs(Energy-Energy_old)<ELAGd%tolE) then
    Energy_old=Energy
    exit
   endif

@@ -65,7 +65,7 @@ subroutine diagF_to_coef(iter,icall,maxdiff,diddiis,ELAGd,RDMd,NO_COEF)
  real(dp)::thresholddiis
 !arrays
  real(dp),allocatable,dimension(:)::Work
- real(dp),allocatable,dimension(:,:)::Eigvec,New_NO_COEF ! Eigvec is initailly the F matrix
+ real(dp),allocatable,dimension(:,:)::Eigvec,New_NO_COEF ! Eigvec is initially the F matrix
 !************************************************************************
  
  thresholddiis=ten**(-ELAGd%itoldiis)
@@ -154,7 +154,7 @@ subroutine scale_F(MaxScaling,Fpq)
  do iscale=1,MaxScaling
   Abs_Fpq=dabs(Fpq)
   if(Abs_Fpq>ten**(9-iscale).and.Abs_Fpq<ten**(10-iscale)) then
-   Fpq=0.1d0*Fpq
+   Fpq=tol1*Fpq
   endif
  enddo 
 end subroutine scale_F

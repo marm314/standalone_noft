@@ -114,11 +114,11 @@ subroutine opt_orb(iter,imethod,ELAGd,RDMd,INTEGd,Vnn,Energy,NO_COEF,mo_ints)
    exit
   else
    if(imethod==1.and.icall==0) then                                        ! F method: adjust MaxScaling for the rest of orb. icall iterations
-    if(iter>2.and.iter>ELAGd%itscale.and.(sumdiff>ELAGd%sumdiff_old)) then ! Parameters chosen empirically (i.e. experience) to
+    if(iter>2.and.iter>ELAGd%itscale.and.(sumdiff>ELAGd%sumdiff_old)) then ! Parameters chosen from experience to
      ELAGd%itscale=iter+10                                                 ! ensure convergence. Maybe we can set them as input variables?
      ELAGd%MaxScaling=ELAGd%MaxScaling+1
      if(ELAGd%MaxScaling>ELAGd%itolLambda) then
-      ELAGd%MaxScaling=2                                                   ! One more empirical/experience parameter =(
+      ELAGd%MaxScaling=2                                                   ! One more empirical/experience parameter used for convergence =(
      endif
     endif
     ELAGd%sumdiff_old=sumdiff

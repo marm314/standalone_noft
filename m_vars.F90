@@ -30,7 +30,7 @@ module m_vars
  real(dp), parameter :: tol16 = 1.0d-16
  real(dp), parameter :: tol20 = 1.0d-20
  real(dp), parameter :: thousand = 1.0d3
- real(dp), parameter :: pi   = acos(-one)
+ real(dp), parameter :: pi   = dacos(-one)
 
 end module m_vars
 !!***
