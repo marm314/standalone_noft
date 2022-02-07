@@ -87,9 +87,9 @@ subroutine opt_orb(iter,imethod,ELAGd,RDMd,INTEGd,Vnn,Energy,NO_COEF,mo_ints)
  character(len=200)::msg
 !************************************************************************
 
- Energy=0.0d0; Energy_old=0.0d0; convLambda=.false.;nogamma=.true.;
+ Energy=zero; Energy_old=zero; convLambda=.false.;nogamma=.true.;
  if((imethod==1).and.(iter==0)) then
-  ELAGd%sumdiff_old=0.0d0
+  ELAGd%sumdiff_old=zero
  endif
  
  icall=0
@@ -209,8 +209,8 @@ subroutine lambda_conv(ELAGd,RDMd,converg_lamb,sumdiff,maxdiff)
 !arrays
 !************************************************************************
 
- tol_dif_Lambda=1.0d1**(-ELAGd%itolLambda)
- converg_lamb=.true.; sumdiff=0.0d0; maxdiff=0.0d0;
+ tol_dif_Lambda=ten**(-ELAGd%itolLambda)
+ converg_lamb=.true.; sumdiff=zero; maxdiff=zero;
  
  do iorb=1,RDMd%NBF_tot
   do iorb1=1,RDMd%NBF_tot

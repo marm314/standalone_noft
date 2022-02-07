@@ -44,7 +44,7 @@ program noft_hubbard
  integer::Ncoupled=1,Nbeta_elect,Nalpha_elect,iERItyp=-1
  integer::imethocc=1,imethorb=1,itermax=10000,iprintdmn=0,iprintints=0
  integer::itolLambda=5,ndiis=5
- real(dp)::Enof,tolE=1.0d-9,Vnn=0.0d0
+ real(dp)::Enof,tolE=tol9,Vnn=zero
  real(dp),allocatable,dimension(:)::Occ,Work
  real(dp),allocatable,dimension(:,:)::NO_COEF,SITE_Overlap
  character(len=100)::ofile_name
@@ -68,7 +68,7 @@ program noft_hubbard
  read(arg,'(f20.8)') U
 
  ! Hubbard parameteres
- t=1.0          ! We fix this one and tune U
+ t=one          ! We fix this one and tune U
  ! NOFT parameteres
  NBF_tot=Nsites
  NBF_occ=NBF_tot
@@ -79,13 +79,13 @@ program noft_hubbard
  ! Allocate arrays
  allocate(Occ(NBF_tot),Work(1))
  allocate(NO_COEF(NBF_tot,NBF_tot),SITE_Overlap(NBF_tot,NBF_tot))
- Occ=0.0d0; NO_COEF=0.0d0; SITE_Overlap=0.0d0;
+ Occ=zero; NO_COEF=zero; SITE_Overlap=zero;
  ! SITE_Overlap is the identity matrix
  do isite=1,NBF_tot
-  SITE_Overlap(isite,isite)=1.0d0
+  SITE_Overlap(isite,isite)=one
  enddo
  ! Hcore (saved in NO_COEF initially before the diagonalization)
- NO_COEF=0.0d0
+ NO_COEF=zero
  do isite=1,NBF_tot-1
   isite1=isite+1
   NO_COEF(isite,isite1)=-t
@@ -104,7 +104,7 @@ program noft_hubbard
  endif
  deallocate(Work)
  ! Initialize and run the optimization
- Occ=0.0d0
+ Occ=zero
  call run_noft(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect,&
  &  iERItyp,imethocc,imethorb,itermax,iprintdmn,iprintints,itolLambda,ndiis,Enof,tolE,Vnn,&
  &  NO_COEF,SITE_Overlap,Occ,mo_ints,ofile_name)
@@ -151,7 +151,7 @@ subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,NO_COEF,ONEBODY,ERImol,ERImolv)
  !write(*,*) ' Starting transformation of hCORE and ERI integrals'
  ! Compute ONEBODY (initially SITE_ONEBODY, in the end ONEBODY)
  allocate(TMP_ONEBODY(NBF_tot,NBF_tot))
- ONEBODY=0.0d0
+ ONEBODY=zero
  do isite=1,NBF_tot-1
   isite1=isite+1
   ONEBODY(isite,isite1)=-t
@@ -165,7 +165,7 @@ subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,NO_COEF,ONEBODY,ERImol,ERImolv)
 
  ! Compute ERImol (initially SITE_ERI, in the end ERImol)
  if(present(ERImol)) then
-  ERImol=0.0d0
+  ERImol=zero
   do isite=1,NBF_tot
    ERImol(isite,isite,isite,isite)=U
   enddo
@@ -174,7 +174,7 @@ subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,NO_COEF,ONEBODY,ERImol,ERImolv)
 
  ! Compute ERImol (initially SITE_ERI, in the end ERImolv). Here NBF_jkl=NBF_tot
  if(present(ERImolv)) then
-  ERImolv=0.0d0
+  ERImolv=zero
   do isite=1,NBF_tot
    NBF2=NBF_tot
    NBF3=NBF2*NBF_jkl
@@ -208,6 +208,7 @@ end subroutine mo_ints
 !! SOURCE
 
 subroutine transformERI(NBF,NO_COEF,ERImol)
+ use m_vars
  implicit none
  integer,intent(in)::NBF
  double precision,dimension(NBF,NBF,NBF,NBF),intent(inout)::ERImol
@@ -216,7 +217,7 @@ subroutine transformERI(NBF,NO_COEF,ERImol)
  integer::i,j,k,l,m
  allocate(TMP_ERI(NBF,NBF,NBF,NBF))
  ! L -> S
- TMP_ERI=0.0d0
+ TMP_ERI=zero
  do i=1,NBF
   do j=1,NBF
    do k=1,NBF
@@ -229,7 +230,7 @@ subroutine transformERI(NBF,NO_COEF,ERImol)
   enddo
  enddo
  ! K -> R
- ERImol=0.0d0
+ ERImol=zero
  do i=1,NBF
   do j=1,NBF
    do m=1,NBF
@@ -242,7 +243,7 @@ subroutine transformERI(NBF,NO_COEF,ERImol)
   enddo
  enddo
  ! J -> Q
- TMP_ERI=0.0d0
+ TMP_ERI=zero
  do i=1,NBF
   do m=1,NBF
    do k=1,NBF
@@ -255,7 +256,7 @@ subroutine transformERI(NBF,NO_COEF,ERImol)
   enddo
  enddo
  ! I -> P
- ERImol=0.0d0
+ ERImol=zero
  do m=1,NBF
   do j=1,NBF
    do k=1,NBF
@@ -291,6 +292,7 @@ end subroutine transformERI
 !! SOURCE
 
 subroutine transformERIv(NBF,NO_COEF,ERImolv)
+ use m_vars
  implicit none
  integer,intent(in)::NBF
  double precision,dimension(NBF*NBF*NBF*NBF),intent(inout)::ERImolv
@@ -302,7 +304,7 @@ subroutine transformERIv(NBF,NO_COEF,ERImolv)
  NBF4=NBF3*NBF
  allocate(TMP_ERIv(NBF*NBF*NBF*NBF))
  ! L -> S
- TMP_ERIv=0.0d0
+ TMP_ERIv=zero
  do i=1,NBF
   ii=i-1
   do j=1,NBF
@@ -321,7 +323,7 @@ subroutine transformERIv(NBF,NO_COEF,ERImolv)
   enddo
  enddo
  ! K -> R
- ERImolv=0.0d0
+ ERImolv=zero
  do i=1,NBF
   ii=i-1
   do j=1,NBF
@@ -340,7 +342,7 @@ subroutine transformERIv(NBF,NO_COEF,ERImolv)
   enddo
  enddo
  ! J -> Q
- TMP_ERIv=0.0d0
+ TMP_ERIv=zero
  do i=1,NBF
   ii=i-1
   do m=1,NBF
@@ -359,7 +361,7 @@ subroutine transformERIv(NBF,NO_COEF,ERImolv)
   enddo
  enddo
  ! I -> P
- ERImolv=0.0d0
+ ERImolv=zero
  do m=1,NBF
   mm=m-1
   do j=1,NBF
