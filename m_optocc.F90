@@ -71,9 +71,9 @@ subroutine opt_occ(iter,imethod,keep_occs,RDMd,Vnn,Energy,hCORE,ERI_J,ERI_K,ERI_
  real(dp),dimension(RDMd%NBF_ldiag),intent(in)::ERI_J,ERI_K,ERI_L 
 !Local variables ------------------------------
 !scalars
- logical::diagco,conveg=.false.
+ logical::diagco,conveg=.false.,debug=.false.
  integer,parameter::msave=7,nextv=47,nfcall=6,nfgcal=7,g=28,toobig=2,vneed=4
- integer::igamma,iflag,ig,icall,icall1,Mtosave,Nwork,Nwork2
+ integer::iorb,igamma,iflag,ig,icall,icall1,Mtosave,Nwork,Nwork2
 !arrays
  character(len=200)::msg
  integer,dimension(2)::info_print
@@ -108,7 +108,25 @@ subroutine opt_occ(iter,imethod,keep_occs,RDMd,Vnn,Energy,hCORE,ERI_J,ERI_K,ERI_
  ! Do iterations if the current GAMMAs do not produce small gradients
  icall=0
  if((.not.conveg).and.(.not.keep_occs)) then 
-  if(imethod==1) then ! Conjugate gradients. (The subroutine uses goto. It is not clean but needed)
+  if(imethod==1) then ! LBFGS
+   write(msg,'(a)') 'Calling LBFGS to optimize occ. numbers'
+   call write_output(msg)
+   Nwork=RDMd%Ngammas*(2*msave+1)+2*msave
+   Mtosave=5; info_print(1)= -1; info_print(2)= 0; diagco= .false.;
+   icall=0; iflag=0;
+   allocate(Work(Nwork),diag(RDMd%Ngammas))
+   do
+    call calc_E_occ(RDMd,GAMMAs,Energy,hCORE,ERI_J,ERI_K,ERI_L)
+    call calc_Grad_occ(RDMd,Grad_GAMMAs,hCORE,ERI_J,ERI_K,ERI_L)
+    call LBFGS_INTERN(RDMd%Ngammas,Mtosave,GAMMAs,Energy,Grad_GAMMAs,diagco,diag,info_print,tol5,tol16,Work,iflag)
+    if(iflag<=0) exit
+    icall=icall+1
+!  We allow at most 2000 evaluations of Energy and Gradient
+    if(icall==2000) exit
+!-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --       
+   enddo
+   deallocate(Work,diag)
+  else ! Conjugate gradients. (The subroutine uses goto. It is not clean but needed...)
    write(msg,'(a)') 'Calling CG to optimize occ. numbers'
    call write_output(msg)
    Nwork=60; Nwork2=71+RDMd%Ngammas*(RDMd%Ngammas+15)/2; 
@@ -157,24 +175,6 @@ subroutine opt_occ(iter,imethod,keep_occs,RDMd,Vnn,Energy,hCORE,ERI_J,ERI_K,ERI_
 
 60  deallocate(iWork,Work,Work2)
 
-  else ! LBFGS
-   write(msg,'(a)') 'Calling LBFGS to optimize occ. numbers'
-   call write_output(msg)
-   Nwork=RDMd%Ngammas*(2*msave+1)+2*msave
-   Mtosave=5; info_print(1)= -1; info_print(2)= 0; diagco= .false.;
-   icall=0; iflag=0;
-   allocate(Work(Nwork),diag(RDMd%Ngammas))
-   do
-    call calc_E_occ(RDMd,GAMMAs,Energy,hCORE,ERI_J,ERI_K,ERI_L)
-    call calc_Grad_occ(RDMd,Grad_GAMMAs,hCORE,ERI_J,ERI_K,ERI_L)
-    call LBFGS_INTERN(RDMd%Ngammas,Mtosave,GAMMAs,Energy,Grad_GAMMAs,diagco,diag,info_print,tol5,tol16,Work,iflag)
-    if(iflag<=0) exit
-    icall=icall+1
-!  We allow at most 2000 evaluations of Energy and Gradient
-    if(icall==2000) exit
-!-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --       
-   enddo
-   deallocate(Work,diag)
   endif
  endif 
  
@@ -187,6 +187,19 @@ subroutine opt_occ(iter,imethod,keep_occs,RDMd,Vnn,Energy,hCORE,ERI_J,ERI_K,ERI_
  call calc_E_occ(RDMd,GAMMAs,Energy,hCORE,ERI_J,ERI_K,ERI_L)
  write(msg,'(a,f15.6,a,i6,a)') 'Occ. optimized energy= ',Energy+Vnn,' after ',icall,' iter.'
  call write_output(msg)
+ if(debug) then
+  RDMd%occ(:)=two*RDMd%occ(:)
+  write(msg,'(a,f10.5,a)') 'Total occ ',sum(RDMd%occ(:)),'. Optimized occ. numbers '
+  call write_output(msg)
+  do iorb=1,(RDMd%NBF_occ/10)*10,10
+   write(msg,'(f12.6,9f11.6)') RDMd%occ(iorb:iorb+9)
+   call write_output(msg)
+  enddo
+  iorb=(RDMd%NBF_occ/10)*10+1
+  write(msg,'(f12.6,*(f11.6))') RDMd%occ(iorb:)
+  call write_output(msg)
+  RDMd%occ(:)=half*RDMd%occ(:)
+ endif
  write(msg,'(a,i6)') 'Number of global iter. ',iter
  call write_output(msg)
  write(msg,'(a)') ' '

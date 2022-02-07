@@ -58,7 +58,7 @@ contains
 !! Nbeta_elect_in=Number of beta electrons (N/2 for spin compensated systems)
 !! Nalpha_elect_in=Number of beta electrons (N/2 for spin compensated systems)
 !! iERItyp_in=Index organization used for ERIs ({ij|lk}, <ij|kl>, and (ik|jl))
-!! imethocc=Method used for OCC opt. CG (1) or L-BFGS (2)
+!! imethocc=Method used for OCC opt. LBFGS(1) or CG (2)
 !! imethorb=Method used to opt. orbs. currently only F_diag (1)
 !! itermax=Max. number of global iters
 !! iprintdmn=Print opt. 1,2-DMNs 
@@ -435,10 +435,10 @@ subroutine echo_input(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in
  write(msg,'(a,i12)') ' Numb. of singly occupied orbs     ',Nalpha_elect_in-Nbeta_elect_in
  call write_output(msg)
  if(imethocc==1) then
-  write(msg,'(a,i12)') ' CG method used in occ opt.        ',imethocc
+  write(msg,'(a,i12)') ' L-BFGS method used in occ opt.    ',imethocc
   call write_output(msg)
  else
-  write(msg,'(a,i12)') ' L-BFGS method used in occ opt.    ',imethocc
+  write(msg,'(a,i12)') ' CG method used in occ opt.        ',imethocc
   call write_output(msg)
  endif
  if(imethorb==1) then
