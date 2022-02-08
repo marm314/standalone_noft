@@ -42,7 +42,7 @@ program noft_hubbard
  implicit none
  integer::INOF,Ista=0,NBF_tot,NBF_occ,Nfrozen,Npairs
  integer::Ncoupled=1,Nbeta_elect,Nalpha_elect,iERItyp=-1
- integer::imethocc=1,imethorb=1,itermax=10000,iprintdmn=0,iprintints=0
+ integer::imethocc=1,imethorb=1,itermax=10000,iprintdmn=0,iprintswdmn=0,iprintints=0
  integer::itolLambda=5,ndiis=5
  real(dp)::Enof,tolE=tol9,Vnn=zero
  real(dp),allocatable,dimension(:)::Occ,Work
@@ -106,8 +106,8 @@ program noft_hubbard
  ! Initialize and run the optimization
  Occ=zero
  call run_noft(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect,&
- &  iERItyp,imethocc,imethorb,itermax,iprintdmn,iprintints,itolLambda,ndiis,Enof,tolE,Vnn,&
- &  NO_COEF,SITE_Overlap,Occ,mo_ints,ofile_name)
+ &  iERItyp,imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,&
+ &  Enof,tolE,Vnn,NO_COEF,SITE_Overlap,Occ,mo_ints,ofile_name)
  ! Print the optimal energy 
  write(*,'(a)') ' '
  write(*,'(a,f12.6)') 'NOFT SCF energy',Enof
