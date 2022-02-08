@@ -324,6 +324,12 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  call INTEGd%free()
  ! Reallocated INTEGd and print FCIDUMP file if required
  if(ifcidump==1) then
+  write(msg,'(a)') ' '
+  call write_output(msg)
+  write(msg,'(a)') ' Reallocating the INTEG to print the FCIDUMP file'
+  call write_output(msg)
+  write(msg,'(a)') ' '
+  call write_output(msg)
   call integ_init(INTEGd,RDMd%NBF_tot,RDMd%NBF_occ,iERItyp_in,AOverlap_in)
   if(INTEGd%iERItyp/=-1) then
    call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,NO_COEF,INTEGd%hCORE,ERImol=INTEGd%ERImol)
@@ -481,7 +487,7 @@ subroutine echo_input(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in
  call write_output(msg)
  write(msg,'(a,i12)') ' Print last hCORE and ERImol ints  ',iprintints
  call write_output(msg)
- write(msg,'(a,i12)') ' Print FCIDUMP and sw-RDMs (true=1)',ifcidump
+ write(msg,'(a,i12)') ' Print FCIDUMP file (true=1)       ',ifcidump
  call write_output(msg)
  ! Check for the presence of restart files. If they are available, read them if required (default=not to read)
  if(present(restart)) then
