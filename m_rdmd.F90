@@ -353,7 +353,7 @@ subroutine print_swrdm(RDMd)
    endif
   enddo
  enddo
- write(*,*) coup(:)
+ 
  
  deallocate(coup,OCC) 
 
