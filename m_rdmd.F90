@@ -353,7 +353,7 @@ subroutine print_swrdm(RDMd)
    endif
   enddo
  enddo
- open(unit=iunit,file='swDM1')
+ open(unit=iunit,file='swDM2')
  do iorb=1,NBF2
   do iorb1=1,NBF2
    do iorb2=1,NBF2
