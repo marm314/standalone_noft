@@ -298,6 +298,20 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  coef_file='NO_COEF'
  call RDMd%print_orbs(NO_COEF,coef_file)
  call RDMd%print_orbs_bin(NO_COEF)
+
+ ! Calculate the chem. pot. = d E / d occ 
+ call occ_chempot(RDMd,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K,INTEGd%ERI_L)
+ write(msg,'(a)') ' '
+ call write_output(msg)
+ do iorb=1,(RDMd%NBF_occ/10)*10,10
+  write(msg,'(f12.6,9f11.6)') RDMd%chempot_orb(iorb:iorb+9)
+  call write_output(msg)
+ enddo
+ iorb=(RDMd%NBF_occ/10)*10+1
+ write(msg,'(f12.6,*(f11.6))') RDMd%chempot_orb(iorb:)
+ call write_output(msg)
+ write(msg,'(a)') ' '
+ call write_output(msg)
  
  ! Print final Energy and its components (occs are already [0:2])
  hONEbody=zero
