@@ -300,6 +300,8 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  call RDMd%print_orbs_bin(NO_COEF)
 
  ! Calculate the chem. pot. = d E / d occ 
+ write(msg,'(a)') 'Chemical potential per orbital '
+ call write_output(msg)
  call occ_chempot(RDMd,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K,INTEGd%ERI_L)
  write(msg,'(a)') ' '
  call write_output(msg)
