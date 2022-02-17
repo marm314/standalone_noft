@@ -302,7 +302,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  ! Calculate the chem. pot. = d E / d occ 
  write(msg,'(a)') ' '
  call write_output(msg)
- write(msg,'(a)') 'Chemical potential per orbital '
+ write(msg,'(a)') 'Chemical potential per orbital (a.u.) '
  call write_output(msg)
  call occ_chempot(RDMd,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K,INTEGd%ERI_L)
  do iorb=1,(RDMd%NBF_occ/10)*10,10
@@ -314,6 +314,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  call write_output(msg)
  write(msg,'(a)') ' '
  call write_output(msg)
+ RDMd%chempot_orb(1)=maxval(RDMd%chempot_orb)
  
  ! Print final Energy and its components (occs are already [0:2])
  hONEbody=zero
@@ -331,6 +332,8 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  write(msg,'(a,f15.6,a)') 'Vee              = ',Vee,' a.u.'
  call write_output(msg)
  write(msg,'(a,f15.6,a)') 'Vnn              = ',Vnn,' a.u.'
+ call write_output(msg)
+ write(msg,'(a,f15.6,a)') 'chem. pot.       = ',RDMd%chempot_orb(1),' a.u.'
  call write_output(msg)
  write(msg,'(a)') ' '
  call write_output(msg)
