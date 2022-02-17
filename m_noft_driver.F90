@@ -314,7 +314,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  call write_output(msg)
  write(msg,'(a)') ' '
  call write_output(msg)
- RDMd%chempot_orb(1)=maxval(RDMd%chempot_orb)
+ RDMd%chempot_orb(1)=maxval(RDMd%chempot_orb(RDMd%Nfrozen+1:RDMNd%NBF_occ))
  
  ! Print final Energy and its components (occs are already [0:2])
  hONEbody=zero
