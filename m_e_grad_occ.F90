@@ -391,6 +391,8 @@ subroutine calc_Chem_pot(RDMd,hCORE,ERI_J,ERI_K,ERI_L)
 !arrays
 !************************************************************************
  
+ RDMd%chempot_orb=zero
+
  if(RDMd%Nsingleocc==0) then
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   if(RDMd%Ncoupled==1) then       ! PNOFi(1): Perfect Pairing (RDMd%Ncoupled=1)
