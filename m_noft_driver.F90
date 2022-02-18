@@ -333,7 +333,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  call write_output(msg)
  write(msg,'(a,f15.6,a)') 'Vnn              = ',Vnn,' a.u.'
  call write_output(msg)
- write(msg,'(a,f15.6,a)') 'chem. pot.       = ',RDMd%chempot_orb(1),' a.u.'
+ write(msg,'(a,f15.6,a,f15.6,a)') 'chem. pot.       = ',RDMd%chempot_orb(1),' a.u.',RDMd%chempot_orb(1)*Ha_eV,' eV'
  call write_output(msg)
  write(msg,'(a)') ' '
  call write_output(msg)
