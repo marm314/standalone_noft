@@ -306,7 +306,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  call write_output(msg)
  call occ_chempot(RDMd,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K,INTEGd%ERI_L)
  chempot_val=-ten**(ten)
- do iorb=1,RDMd%NBF_occ
+ do iorb=RDMd%Nfrozen+1,RDMd%NBF_occ
   if(dabs(RDMd%occ(iorb))>tol8) then
    if(RDMd%chempot_orb(iorb)>chempot_val) chempot_val=RDMd%chempot_orb(iorb) 
   else
