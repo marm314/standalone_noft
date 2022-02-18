@@ -190,7 +190,7 @@ subroutine opt_occ(iter,imethod,keep_occs,RDMd,Vnn,Energy,hCORE,ERI_J,ERI_K,ERI_
  write(msg,'(a,f15.6,a,i6,a)') 'Occ. optimized energy= ',Energy+Vnn,' after ',icall,' iter.'
  call write_output(msg)
  Grad_GAMMAs(:)=dabs(Grad_GAMMAs(:))
- write(msg,'(a,f15.6)') 'Max[|Grad Energy w.r.t. GAMMAS|] ',maxval(Grad_GAMMAs(:))
+ write(msg,'(a,f15.6)') 'Max. [|Grad Energy w.r.t. GAMMAS|]= ',maxval(Grad_GAMMAs(:))
  call write_output(msg)
  if(debug) then
   RDMd%occ(:)=two*RDMd%occ(:)
