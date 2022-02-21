@@ -4,7 +4,6 @@ all:
 	gfortran -O3 -c m_gitver.F90
 	gfortran -O3 -c ../m_nofoutput.F90
 	gfortran -O3 -c ../m_vars.F90
-	gfortran -O3 -c ../m_cg.F90
 	gfortran -O3 -w -ffixed-form -fd-lines-as-comments -c ../m_lbfgs_intern.F
 	gfortran -O3 -c ../m_integd.F90
 	gfortran -O3 -c ../m_rdmd.F90
