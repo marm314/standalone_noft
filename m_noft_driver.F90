@@ -58,7 +58,7 @@ contains
 !! Nbeta_elect_in=Number of beta electrons (N/2 for spin compensated systems)
 !! Nalpha_elect_in=Number of beta electrons (N/2 for spin compensated systems)
 !! iERItyp_in=Index organization used for ERIs ({ij|lk}, <ij|kl>, and (ik|jl))
-!! imethocc=Method used for OCC opt. LBFGS(1) or CG (2)
+!! imethocc=Method used for OCC opt. L-BFGS(1) or CG (2)
 !! imethorb=Method used to opt. orbs. currently only F_diag (1)
 !! itermax=Max. number of global iters
 !! iprintdmn=Print opt. 1,2-DMNs 
@@ -311,7 +311,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  enddo
  write(msg,'(a)') ' '
  call write_output(msg)
- write(msg,'(a,f10.5,a)') 'Chem. potential ',chempot_val,' (a.u.)',chempot_val*Ha_eV,' (eV), and per orbital (a.u.)'
+ write(msg,'(a,f10.5,a,f10.5,a)') 'Chem. potential ',chempot_val,' (a.u.) ',chempot_val*Ha_eV,' (eV), and per orbital (a.u.)'
  call write_output(msg)
  do iorb=1,(RDMd%NBF_occ/10)*10,10
   write(msg,'(f12.6,9f11.6)') RDMd%chempot_orb(iorb:iorb+9)
