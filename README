@@ -52,7 +52,7 @@ the initialization parameters are
     Nbeta_elect=Number of beta electrons (N/2 for spin compensated systems)
     Nalpha_elect=Number of beta electrons (N/2 for spin compensated systems)
     iERItyp=Index organization used to decide the electron rep. integrals (ERIs) type ({ij|lk}, <ij|kl>, and (ik|jl))
-    imethocc=Method used for OCC opt. CG (1) or L-BFGS (2)
+    imethocc=Method used for OCC opt. L-BFGS (1)
     imethorb=Method used to opt. orbs. currently only F_diag (1)
     itermax=Max. number of global iters
     iprintdmn=Print opt. 1,2-DMNs 
