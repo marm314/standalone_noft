@@ -43,7 +43,7 @@ program noft_hubbard
  integer::INOF,Ista=0,NBF_tot,NBF_occ,Nfrozen,Npairs
  integer::Ncoupled=1,Nbeta_elect,Nalpha_elect,iERItyp=-1
  integer::imethocc=1,imethorb=1,itermax=10000,iprintdmn=0,iprintswdmn=0,iprintints=0
- integer::itolLambda=5,ndiis=5
+ integer::itolLambda=5,ndiis=5,iguess=0
  real(dp)::Enof,tolE=tol9,Vnn=zero
  real(dp),allocatable,dimension(:)::Occ,Work
  real(dp),allocatable,dimension(:,:)::NO_COEF,SITE_Overlap
@@ -53,9 +53,9 @@ program noft_hubbard
  integer::isite,isite1,lwork,info
 
  ! Read parameters
- if(iargc()/=4) then
+ if(iargc()/=5) then
   write(*,'(a)') 'Include the arguments:'
-  write(*,'(a)') ' INOF(integer) Nsites(integer) Nalpha_electrons(integer) U(real)'
+  write(*,'(a)') ' INOF(integer) Nsites(integer) Nalpha_electrons(integer) U(real) iguess(0 Hcore, 1 site basis)'
   stop
  endif
  call getarg(1,arg)
@@ -66,6 +66,8 @@ program noft_hubbard
  read(arg,'(i4)') Nalpha_elect
  call getarg(4,arg)
  read(arg,'(f20.8)') U
+ call getarg(5,arg)
+ read(arg,'(i4)') iguess
 
  ! Hubbard parameteres
  t=one          ! We fix this one and tune U
@@ -84,25 +86,30 @@ program noft_hubbard
  do isite=1,NBF_tot
   SITE_Overlap(isite,isite)=one
  enddo
- ! Hcore (saved in NO_COEF initially before the diagonalization)
- NO_COEF=zero
- do isite=1,NBF_tot-1
-  isite1=isite+1
-  NO_COEF(isite,isite1)=-t
-  NO_COEF(isite1,isite)=-t
- enddo
- NO_COEF(1,NBF_tot)=-t
- NO_COEF(NBF_tot,1)=-t
- ! Use as initial GUESS for the Nat. orb. coefs. the Hcore matrix
- lwork=-1
- call DSYEV('V','L',NBF_tot,NO_COEF,NBF_tot,Occ,Work,lwork,info)
- lwork=nint(Work(1))
- if(info==0) then
-  deallocate(Work)
-  allocate(Work(lwork))
+ if(iguess==0) then ! Hcore (saved in NO_COEF initially before the diagonalization)  
+  NO_COEF=zero
+  do isite=1,NBF_tot-1
+   isite1=isite+1
+   NO_COEF(isite,isite1)=-t
+   NO_COEF(isite1,isite)=-t
+  enddo
+  NO_COEF(1,NBF_tot)=-t
+  NO_COEF(NBF_tot,1)=-t
+  ! Use as initial GUESS for the Nat. orb. coefs. the Hcore matrix
+  lwork=-1
   call DSYEV('V','L',NBF_tot,NO_COEF,NBF_tot,Occ,Work,lwork,info)
+  lwork=nint(Work(1))
+  if(info==0) then
+   deallocate(Work)
+   allocate(Work(lwork))
+   call DSYEV('V','L',NBF_tot,NO_COEF,NBF_tot,Occ,Work,lwork,info)
+  endif
+  deallocate(Work)
+ else ! Site basis (identity) 
+  do isite=1,NBF_tot
+   NO_COEF(isite,isite)=one
+  enddo
  endif
- deallocate(Work)
  ! Initialize and run the optimization
  Occ=zero
  call run_noft(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect,&
