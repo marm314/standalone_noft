@@ -12,7 +12,7 @@
 !! SOURCE
 
 module m_hubbard
- use m_vars
+ use m_definitions
  implicit none
 
  integer::Nsites
@@ -36,7 +36,7 @@ end module m_hubbard
 !! SOURCE
 
 program noft_hubbard
- use m_vars
+ use m_definitions
  use m_hubbard
  use m_noft_driver
  implicit none
@@ -144,7 +144,7 @@ end program noft_hubbard
 !! SOURCE
 
 subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,NO_COEF,ONEBODY,ERImol,ERImolv)
- use m_vars
+ use m_definitions
  use m_hubbard
  implicit none
  integer,intent(in)::NBF_tot,NBF_occ,NBF_jkl
@@ -215,7 +215,7 @@ end subroutine mo_ints
 !! SOURCE
 
 subroutine transformERI(NBF,NO_COEF,ERImol)
- use m_vars
+ use m_definitions
  implicit none
  integer,intent(in)::NBF
  double precision,dimension(NBF,NBF,NBF,NBF),intent(inout)::ERImol
@@ -299,7 +299,7 @@ end subroutine transformERI
 !! SOURCE
 
 subroutine transformERIv(NBF,NO_COEF,ERImolv)
- use m_vars
+ use m_definitions
  implicit none
  integer,intent(in)::NBF
  double precision,dimension(NBF*NBF*NBF*NBF),intent(inout)::ERImolv
