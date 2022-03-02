@@ -190,9 +190,9 @@ subroutine opt_orb(iter,imethod,ELAGd,RDMd,INTEGd,Vnn,Energy,mo_ints,NO_COEF,NO_
  
  ! Calc. the final Energy using fixed RDMs and the new NO_COEF (before going back to occ. optimization)
  if(INTEGd%complex_ints) then
-  call calc_E_occ_cpx(RDMd,RDMd%GAMMAs_old,Energy_old,INTEGd%hCOREc,INTEGd%ERIc_J,INTEGd%ERIc_K,INTEGd%ERIc_L,nogamma=nogamma)
+  call calc_E_occ_cpx(RDMd,RDMd%GAMMAs_old,Energy,INTEGd%hCOREc,INTEGd%ERIc_J,INTEGd%ERIc_K,INTEGd%ERIc_L,nogamma=nogamma)
  else
-  call calc_E_occ(RDMd,RDMd%GAMMAs_old,Energy_old,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K,INTEGd%ERI_L,nogamma=nogamma)
+  call calc_E_occ(RDMd,RDMd%GAMMAs_old,Energy,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K,INTEGd%ERI_L,nogamma=nogamma)
  endif
  write(msg,'(a,f15.6,a,i6,a)') 'Orb. optimized energy= ',Energy+Vnn,' after ',icall,' iter.'
  call write_output(msg)
