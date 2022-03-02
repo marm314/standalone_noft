@@ -114,7 +114,7 @@ program noft_hubbard
  Occ=zero
  call run_noft(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect,&
  &  iERItyp,imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,&
- &  Enof,tolE,Vnn,NO_COEF,SITE_Overlap,Occ,mo_ints,ofile_name)
+ &  Enof,tolE,Vnn,SITE_Overlap,Occ,mo_ints,ofile_name,NO_COEF=NO_COEF)
  ! Print the optimal energy 
  write(*,'(a)') ' '
  write(*,'(a,f12.6)') 'NOFT SCF energy',Enof
@@ -130,7 +130,7 @@ end program noft_hubbard
 !! mo_ints
 !!
 !! FUNCTION
-!!  Subroutine provided by the user to compute ONEBODY and ERImol integrals from the sites basis to the 
+!!  Subroutine provided by the user to compute hCORE and ERImol integrals from the sites basis to the 
 !!  'molecular' basis NO_COEF
 !!
 !! INPUTS
@@ -143,32 +143,32 @@ end program noft_hubbard
 !!
 !! SOURCE
 
-subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,NO_COEF,ONEBODY,ERImol,ERImolv)
+subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,NO_COEF,hCORE,ERImol,ERImolv)
  use m_definitions
  use m_hubbard
  implicit none
  integer,intent(in)::NBF_tot,NBF_occ,NBF_jkl
- real(dp),dimension(NBF_tot,NBF_tot),intent(inout)::ONEBODY
- real(dp),dimension(NBF_tot,NBF_jkl,NBF_jkl,NBF_jkl),optional,intent(inout)::ERImol
- real(dp),dimension(NBF_tot*NBF_jkl*NBF_jkl*NBF_jkl),optional,intent(inout)::ERImolv
- real(dp),dimension(NBF_tot,NBF_tot),intent(in)::NO_COEF
- real(dp),allocatable,dimension(:,:)::TMP_ONEBODY
+ real(dp),optional,dimension(NBF_tot,NBF_tot),intent(inout)::hCORE
+ real(dp),optional,dimension(NBF_tot,NBF_jkl,NBF_jkl,NBF_jkl),intent(inout)::ERImol
+ real(dp),optional,dimension(NBF_tot*NBF_jkl*NBF_jkl*NBF_jkl),intent(inout)::ERImolv
+ real(dp),optional,dimension(NBF_tot,NBF_tot),intent(in)::NO_COEF
+ real(dp),allocatable,dimension(:,:)::TMP_hCORE
  integer::isite,isite1,isitev,NBF2,NBF3,NBF4
 
  !write(*,*) ' Starting transformation of hCORE and ERI integrals'
- ! Compute ONEBODY (initially SITE_ONEBODY, in the end ONEBODY)
- allocate(TMP_ONEBODY(NBF_tot,NBF_tot))
- ONEBODY=zero
+ ! Compute hCORE (initially SITE_hCORE, in the end hCORE)
+ allocate(TMP_hCORE(NBF_tot,NBF_tot))
+ hCORE=zero
  do isite=1,NBF_tot-1
   isite1=isite+1
-  ONEBODY(isite,isite1)=-t
-  ONEBODY(isite1,isite)=-t
+  hCORE(isite,isite1)=-t
+  hCORE(isite1,isite)=-t
  enddo
- ONEBODY(1,NBF_tot)=-t
- ONEBODY(NBF_tot,1)=-t
- TMP_ONEBODY=matmul(ONEBODY,NO_COEF)
- ONEBODY=matmul(transpose(NO_COEF),TMP_ONEBODY)
- deallocate(TMP_ONEBODY)
+ hCORE(1,NBF_tot)=-t
+ hCORE(NBF_tot,1)=-t
+ TMP_hCORE=matmul(hCORE,NO_COEF)
+ hCORE=matmul(transpose(NO_COEF),TMP_hCORE)
+ deallocate(TMP_hCORE)
 
  ! Compute ERImol (initially SITE_ERI, in the end ERImol)
  if(present(ERImol)) then

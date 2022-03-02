@@ -11,6 +11,7 @@ all:
 	gfortran -O2 -c ../m_diagf.F90
 	gfortran -O2 -c ../m_gammatodm2.F90
 	gfortran -O2 -c ../m_e_grad_occ.F90
+	gfortran -O2 -c ../m_e_grad_occ_cpx.F90
 	gfortran -O2 -c ../m_optocc.F90
 	gfortran -O2 -c ../m_optorb.F90
 	gfortran -O2 -c ../m_noft_driver.F90
