@@ -188,9 +188,10 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
 & Nbeta_elect_in,Nalpha_elect_in)
  endif
  if(present(lowmemERI)) then
-  call integ_init(INTEGd,RDMd%NBF_tot,RDMd%NBF_occ,iERItyp_in,AOverlap_in,lowmemERI=lowmemERI)
+  call integ_init(INTEGd,RDMd%NBF_tot,RDMd%NBF_occ,iERItyp_in,AOverlap_in,lowmemERI=lowmemERI,&
+& complex_ints_in=present(NO_COEFc))
  else
-  call integ_init(INTEGd,RDMd%NBF_tot,RDMd%NBF_occ,iERItyp_in,AOverlap_in)
+  call integ_init(INTEGd,RDMd%NBF_tot,RDMd%NBF_occ,iERItyp_in,AOverlap_in,complex_ints_in=present(NO_COEFc))
  endif
  call elag_init(ELAGd,RDMd%NBF_tot,diagLpL,itolLambda,ndiis,imethorb,tolE_in,INTEGd%complex_ints)
 
@@ -394,14 +395,16 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
   call write_output(msg)
   write(msg,'(a)') ' '
   call write_output(msg)
-  call integ_init(INTEGd,RDMd%NBF_tot,RDMd%NBF_occ,iERItyp_in,AOverlap_in)
-  if(INTEGd%iERItyp/=-1) then
-   call mo_ints(RDMd%NBF_tot,RDMd%NBF_tot,INTEGd%NBF_jkl,NO_COEF=NO_COEF,hCORE=INTEGd%hCORE,ERImol=INTEGd%ERImol)
-  else
-   call mo_ints(RDMd%NBF_tot,RDMd%NBF_tot,INTEGd%NBF_jkl,NO_COEF=NO_COEF,hCORE=INTEGd%hCORE,ERImolv=INTEGd%ERImolv)
+  if(.not.present(NO_COEFc)) then
+   call integ_init(INTEGd,RDMd%NBF_tot,RDMd%NBF_occ,iERItyp_in,AOverlap_in,complex_ints_in=.false.)
+   if(INTEGd%iERItyp/=-1) then
+    call mo_ints(RDMd%NBF_tot,RDMd%NBF_tot,INTEGd%NBF_jkl,NO_COEF=NO_COEF,hCORE=INTEGd%hCORE,ERImol=INTEGd%ERImol)
+   else
+    call mo_ints(RDMd%NBF_tot,RDMd%NBF_tot,INTEGd%NBF_jkl,NO_COEF=NO_COEF,hCORE=INTEGd%hCORE,ERImolv=INTEGd%ERImolv)
+   endif
+   call INTEGd%print_dump(RDMd%Nalpha_elect+RDMd%Nbeta_elect,Vnn)
+   call INTEGd%free()
   endif
-  call INTEGd%print_dump(RDMd%Nalpha_elect+RDMd%Nbeta_elect,Vnn)
-  call INTEGd%free()
  endif
  call RDMd%free() 
 
