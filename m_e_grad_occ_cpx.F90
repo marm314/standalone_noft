@@ -91,7 +91,9 @@ subroutine calc_E_occ_cpx(RDMd,GAMMAs,Energy,hCOREc,ERIc_J,ERIc_K,ERIc_L,nogamma
    call gamma_to_2rdm(RDMd,GAMMAs)
   endif
  endif 
- Energy=zero; Energy_cpx=COMPLEX_ZERO;
+
+ Energy=zero; Energy_cpx=complex_zero;
+
  if(RDMd%Nsingleocc==0) then
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
@@ -197,7 +199,8 @@ subroutine calc_Grad_occ_cpx(RDMd,Grad,hCOREc,ERIc_J,ERIc_K,ERIc_L)
 !************************************************************************
  
  allocate(Grad_cpx(RDMd%Ngammas))
- Grad = zero; Grad_cpx=COMPLEX_ZERO;
+
+ Grad = zero; Grad_cpx=complex_zero;
 
  if(RDMd%Nsingleocc==0) then
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -301,7 +304,7 @@ subroutine calc_Chem_pot_cpx(RDMd,hCOREc,ERIc_J,ERIc_K,ERIc_L)
  
  allocate(chempot_orb(RDMd%NBF_occ))
 
- chempot_orb=COMPLEX_ZERO;  RDMd%chempot_orb=zero;
+ RDMd%chempot_orb=zero; chempot_orb=complex_zero; 
 
  if(RDMd%Nsingleocc==0) then
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -390,7 +393,7 @@ function dm2_x_eriC(RDMd,icase,iorb,DM2_JKL,ERI) result(E_dm2ERI_iorb)
  integer::iorb1
 !arrays
 !************************************************************************
-E_dm2ERI_iorb = zero
+E_dm2ERI_iorb = complex_zero
 select case(icase)
 !-----------------------------------------------------------------------
  case(0)
@@ -452,7 +455,7 @@ function Ddm2_gamma_x_ERIc(RDMd,icase,iorb,igamma,DDM2_JorKorL,ERI) result(Grad_
  integer::iorb1
 !arrays
 !************************************************************************
-Grad_Ddm2_ERI_iorb = zero
+Grad_Ddm2_ERI_iorb = complex_zero
 select case(icase)
 !-----------------------------------------------------------------------
  case(0)

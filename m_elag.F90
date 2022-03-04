@@ -21,6 +21,7 @@
 module m_elag
 
  use m_nofoutput
+ use m_definitions
  use m_rdmd
  use m_integd
 
@@ -39,24 +40,29 @@ module m_elag
 
  type,public :: elag_t
 
-  logical::diagLpL=.true.        ! Do the diag. using (lambda+lambda)/2?
-  logical::diagLpL_done=.false.  ! Did we use use (lambda+lambda)/2?
-  integer::imethod=1             ! Method used for optimization (1-> Diag F matrix)
-  integer::MaxScaling=0          ! Max scaling reductions employed to avoid divergence of diag[F]
-  integer::itscale=1             ! Above this number of iterations we do MaxScaling=MaxScaling+1
-  integer::itolLambda=5          ! Integer used to define 10**-itolLambda as threshold of Lambda_qp-Lambda_pq* convergence
-  integer::itoldiis=3            ! Integer used to define 10**-itoldiis as threshold of DIIS trigger
-  integer::idiis=0               ! Current DIIS iteration
-  integer::ndiis=5               ! The number of iterations required to apply DIIS is ndiis+1
-  integer::ndiis_array           ! Size of the arrays used in DIIS (ndiis+2)
-  real(dp)::sumdiff_old  ! Old value of sum_pq |F_pq|  for p/=q 
-  real(dp)::tolE         ! Tolerance that will be imposed in Energy convergence
+  logical::cpx_lambdas=.false.  ! True for complex Lambdas (i.e. complex orbitals)
+  logical::diagLpL=.true.       ! Do the diag. using (lambda+lambda)/2?
+  logical::diagLpL_done=.false. ! Did we use use (lambda+lambda)/2?
+  integer::imethod=1            ! Method used for optimization (1-> Diag F matrix)
+  integer::MaxScaling=0         ! Max scaling reductions employed to avoid divergence of diag[F]
+  integer::itscale=1            ! Above this number of iterations we do MaxScaling=MaxScaling+1
+  integer::itolLambda=5         ! Integer used to define 10**-itolLambda as threshold of Lambda_qp-Lambda_pq* convergence
+  integer::itoldiis=3           ! Integer used to define 10**-itoldiis as threshold of DIIS trigger
+  integer::idiis=0              ! Current DIIS iteration
+  integer::ndiis=5              ! The number of iterations required to apply DIIS is ndiis+1
+  integer::ndiis_array          ! Size of the arrays used in DIIS (ndiis+2)
+  real(dp)::sumdiff_old         ! Old value of sum_pq |F_pq|  for p/=q 
+  real(dp)::tolE                ! Tolerance that will be imposed in Energy convergence
 ! arrays 
-  real(dp),allocatable,dimension(:)::F_diag       ! F_pp (Diag. part of the F matrix)
-  real(dp),allocatable,dimension(:)::Coef_DIIS    ! DIIS coefs. used to build linear comb. of F matrices
-  real(dp),allocatable,dimension(:,:)::Lambdas    ! Lambda_pq (Lagrange multipliers matrix)
-  real(dp),allocatable,dimension(:,:)::DIIS_mat   ! DIIS matrix used to solve the system of eqs. DIIS_MAT*Coef_DIIS = (0 0 ... 0 1) 
-  real(dp),allocatable,dimension(:,:,:)::F_DIIS   ! F matrices used by DIIS
+  real(dp),allocatable,dimension(:)::F_diag         ! F_pp (Diag. part of the F matrix)
+  real(dp),allocatable,dimension(:)::Coef_DIIS      ! DIIS coefs. used to build linear comb. of F matrices
+  real(dp),allocatable,dimension(:,:)::Lambdas      ! Lambda_pq (Lagrange multipliers matrix)
+  real(dp),allocatable,dimension(:,:)::DIIS_mat     ! DIIS matrix used to solve the system of eqs. DIIS_MAT*Coef_DIIS = (0 0 ... 0 1) 
+  real(dp),allocatable,dimension(:,:,:)::F_DIIS     ! F matrices used by DIIS
+  complex(dp),allocatable,dimension(:)::Coef_DIISc  ! DIIS coefs. used to build linear comb. of F matrices (complex)
+  complex(dp),allocatable,dimension(:,:)::LambdasC  ! Lambda_pq (complex Lagrange multipliers matrix) (complex)
+  complex(dp),allocatable,dimension(:,:)::DIIS_matC ! DIIS matrix used to solve the system of eqs. DIIS_MAT*Coef_DIIS = (0 0 ... 0 1) (complex)
+  complex(dp),allocatable,dimension(:,:,:)::F_DIISc ! F matrices used by DIIS (complex)
 
  contains 
    procedure :: free => elag_free
@@ -102,10 +108,10 @@ CONTAINS  !=====================================================================
 !!
 !! SOURCE
 
-subroutine elag_init(ELAGd,NBF_tot,diagLpL_in,itolLambda_in,ndiis_in,imethod_in,tolE_in)
+subroutine elag_init(ELAGd,NBF_tot,diagLpL_in,itolLambda_in,ndiis_in,imethod_in,tolE_in,cpx_mos)
 !Arguments ------------------------------------
 !scalars
- logical,intent(in)::diagLpL_in
+ logical,intent(in)::diagLpL_in,cpx_mos
  integer,intent(in)::NBF_tot,itolLambda_in,ndiis_in,imethod_in
  real(dp),intent(in)::tolE_in
  type(elag_t),intent(inout)::ELAGd
@@ -116,6 +122,7 @@ subroutine elag_init(ELAGd,NBF_tot,diagLpL_in,itolLambda_in,ndiis_in,imethod_in,
  character(len=200)::msg
 !************************************************************************
 
+ ELAGd%cpx_lambdas=cpx_mos
  ELAGd%imethod=imethod_in
  ELAGd%itolLambda=itolLambda_in
  ELAGd%diagLpL=diagLpL_in
@@ -123,9 +130,16 @@ subroutine elag_init(ELAGd,NBF_tot,diagLpL_in,itolLambda_in,ndiis_in,imethod_in,
  ELAGd%ndiis_array=ELAGd%ndiis+2
  ELAGd%tolE=tolE_in
  ! Calculate memory needed
- totMEM=NBF_tot+2*NBF_tot*NBF_tot
- if(ELAGd%ndiis>0.and.ELAGd%imethod==1) then
-  totMEM=totMEM+ELAGd%ndiis_array+ELAGd%ndiis_array*NBF_tot*NBF_tot+ELAGd%ndiis_array*ELAGd%ndiis_array
+ if(cpx_mos) then
+  totMEM=NBF_tot+4*NBF_tot*NBF_tot
+  if(ELAGd%ndiis>0.and.ELAGd%imethod==1) then
+   totMEM=totMEM+2*ELAGd%ndiis_array+8*ELAGd%ndiis_array*NBF_tot*NBF_tot+4*ELAGd%ndiis_array*ELAGd%ndiis_array
+  endif
+ else
+  totMEM=NBF_tot+NBF_tot*NBF_tot
+  if(ELAGd%ndiis>0.and.ELAGd%imethod==1) then
+   totMEM=totMEM+ELAGd%ndiis_array+ELAGd%ndiis_array*NBF_tot*NBF_tot+ELAGd%ndiis_array*ELAGd%ndiis_array
+  endif
  endif
  totMEM=8*totMEM       ! Bytes
  totMEM=totMEM*tol6    ! Bytes to Mb  
@@ -139,12 +153,21 @@ subroutine elag_init(ELAGd,NBF_tot,diagLpL_in,itolLambda_in,ndiis_in,imethod_in,
  call write_output(msg)
  ! Allocate arrays
  allocate(ELAGd%F_diag(NBF_tot))
- allocate(ELAGd%Lambdas(NBF_tot,NBF_tot)) 
- if(ELAGd%ndiis>0.and.ELAGd%imethod==1) then
-  allocate(ELAGd%Coef_DIIS(ELAGd%ndiis_array))
-  allocate(ELAGd%F_DIIS(ELAGd%ndiis_array,NBF_tot,NBF_tot))
-  allocate(ELAGd%DIIS_mat(ELAGd%ndiis_array,ELAGd%ndiis_array)) 
- endif 
+ if(cpx_mos) then
+  allocate(ELAGd%LambdasC(NBF_tot,NBF_tot)) 
+  if(ELAGd%ndiis>0.and.ELAGd%imethod==1) then
+   allocate(ELAGd%Coef_DIISc(ELAGd%ndiis_array))
+   allocate(ELAGd%F_DIISc(ELAGd%ndiis_array,NBF_tot,NBF_tot))
+   allocate(ELAGd%DIIS_matC(ELAGd%ndiis_array,ELAGd%ndiis_array)) 
+  endif 
+ else 
+  allocate(ELAGd%Lambdas(NBF_tot,NBF_tot)) 
+  if(ELAGd%ndiis>0.and.ELAGd%imethod==1) then
+   allocate(ELAGd%Coef_DIIS(ELAGd%ndiis_array))
+   allocate(ELAGd%F_DIIS(ELAGd%ndiis_array,NBF_tot,NBF_tot))
+   allocate(ELAGd%DIIS_mat(ELAGd%ndiis_array,ELAGd%ndiis_array)) 
+  endif 
+ endif
  
 end subroutine elag_init
 !!***
@@ -177,12 +200,21 @@ subroutine elag_free(ELAGd)
 !************************************************************************
 
  deallocate(ELAGd%F_diag) 
- deallocate(ELAGd%Lambdas) 
- if(ELAGd%ndiis>0.and.ELAGd%imethod==1) then
-  deallocate(ELAGd%Coef_DIIS)
-  deallocate(ELAGd%F_DIIS)
-  deallocate(ELAGd%DIIS_mat) 
- endif 
+ if(ELAGd%cpx_lambdas) then
+  deallocate(ELAGd%LambdasC) 
+  if(ELAGd%ndiis>0.and.ELAGd%imethod==1) then
+   deallocate(ELAGd%Coef_DIISc)
+   deallocate(ELAGd%F_DIISc)
+   deallocate(ELAGd%DIIS_matC) 
+  endif 
+ else
+  deallocate(ELAGd%Lambdas) 
+  if(ELAGd%ndiis>0.and.ELAGd%imethod==1) then
+   deallocate(ELAGd%Coef_DIIS)
+   deallocate(ELAGd%F_DIIS)
+   deallocate(ELAGd%DIIS_mat) 
+  endif 
+ endif
 
 end subroutine elag_free
 !!***
@@ -222,48 +254,91 @@ subroutine build_elag(ELAGd,RDMd,INTEGd,DM2_J,DM2_K,DM2_L)
  character(len=200)::msg
 !************************************************************************
 
- ELAGd%Lambdas=zero
-
- do iorb=1,RDMd%NBF_occ
-  ELAGd%Lambdas(iorb,:)=RDMd%occ(iorb)*INTEGd%hCORE(:,iorb)                                          ! Init: Lambda_pq = n_p hCORE_qp
-  if(INTEGd%iERItyp/=-1) then
-   ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+RDMd%DM2_iiii(iorb)*INTEGd%ERImol(:,iorb,iorb,iorb)   ! any->iorb,iorb->iorb
-   do iorb1=1,RDMd%NBF_occ
-    if(iorb/=iorb1) then
-     if(INTEGd%iERItyp==0) then ! DoNOF notation {ij|lk}
-      ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_J(iorb,iorb1)*INTEGd%ERImol(:,iorb1,iorb1,iorb) ! any->iorb,iorb1->iorb1
-      ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_K(iorb,iorb1)*INTEGd%ERImol(:,iorb1,iorb,iorb1) ! any->iorb1,iorb1->iorb
-      ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_L(iorb,iorb1)*INTEGd%ERImol(:,iorb,iorb1,iorb1) ! any->iorb1,iorb->iorb1
-     elseif(INTEGd%iERItyp==1) then ! <ij|kl>
-      ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_J(iorb,iorb1)*INTEGd%ERImol(:,iorb1,iorb,iorb1) ! any->iorb,iorb1->iorb1
-      ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_K(iorb,iorb1)*INTEGd%ERImol(:,iorb1,iorb1,iorb) ! any->iorb1,iorb1->iorb
-      ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_L(iorb,iorb1)*INTEGd%ERImol(:,iorb,iorb1,iorb1) ! any->iorb1,iorb->iorb1
-     elseif(INTEGd%iERItyp==2) then ! (ik|jl)
-      ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_J(iorb,iorb1)*INTEGd%ERImol(:,iorb,iorb1,iorb1) ! any->iorb,iorb1->iorb1
-      ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_K(iorb,iorb1)*INTEGd%ERImol(:,iorb1,iorb1,iorb) ! any->iorb1,iorb1->iorb
-      ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_L(iorb,iorb1)*INTEGd%ERImol(:,iorb1,iorb,iorb1) ! any->iorb1,iorb->iorb1
-     else
-      ! Nth
+ if(ELAGd%cpx_lambdas) then
+  ELAGd%LambdasC=complex_zero
+  do iorb=1,RDMd%NBF_occ
+   ELAGd%LambdasC(iorb,:)=RDMd%occ(iorb)*INTEGd%hCOREc(:,iorb)                                           ! Init: Lambda_pq = n_p hCORE_qp
+   if(INTEGd%iERItyp/=-1) then
+    ELAGd%LambdasC(iorb,:)=ELAGd%LambdasC(iorb,:)+RDMd%DM2_iiii(iorb)*INTEGd%ERIcmol(:,iorb,iorb,iorb)   ! any->iorb,iorb->iorb
+    do iorb1=1,RDMd%NBF_occ
+     if(iorb/=iorb1) then
+      if(INTEGd%iERItyp==0) then ! DoNOF notation {ij|lk}
+       ELAGd%LambdasC(iorb,:)=ELAGd%LambdasC(iorb,:)+DM2_J(iorb,iorb1)*INTEGd%ERIcmol(:,iorb1,iorb1,iorb) ! any->iorb,iorb1->iorb1
+       ELAGd%LambdasC(iorb,:)=ELAGd%LambdasC(iorb,:)+DM2_K(iorb,iorb1)*INTEGd%ERIcmol(:,iorb1,iorb,iorb1) ! any->iorb1,iorb1->iorb
+       ELAGd%LambdasC(iorb,:)=ELAGd%LambdasC(iorb,:)+DM2_L(iorb,iorb1)*INTEGd%ERIcmol(:,iorb,iorb1,iorb1) ! any->iorb1,iorb->iorb1
+      elseif(INTEGd%iERItyp==1) then ! <ij|kl>
+       ELAGd%LambdasC(iorb,:)=ELAGd%LambdasC(iorb,:)+DM2_J(iorb,iorb1)*INTEGd%ERIcmol(:,iorb1,iorb,iorb1) ! any->iorb,iorb1->iorb1
+       ELAGd%LambdasC(iorb,:)=ELAGd%LambdasC(iorb,:)+DM2_K(iorb,iorb1)*INTEGd%ERIcmol(:,iorb1,iorb1,iorb) ! any->iorb1,iorb1->iorb
+       ELAGd%LambdasC(iorb,:)=ELAGd%LambdasC(iorb,:)+DM2_L(iorb,iorb1)*INTEGd%ERIcmol(:,iorb,iorb1,iorb1) ! any->iorb1,iorb->iorb1
+      elseif(INTEGd%iERItyp==2) then ! (ik|jl)
+       ELAGd%LambdasC(iorb,:)=ELAGd%LambdasC(iorb,:)+DM2_J(iorb,iorb1)*INTEGd%ERIcmol(:,iorb,iorb1,iorb1) ! any->iorb,iorb1->iorb1
+       ELAGd%LambdasC(iorb,:)=ELAGd%LambdasC(iorb,:)+DM2_K(iorb,iorb1)*INTEGd%ERIcmol(:,iorb1,iorb1,iorb) ! any->iorb1,iorb1->iorb
+       ELAGd%LambdasC(iorb,:)=ELAGd%LambdasC(iorb,:)+DM2_L(iorb,iorb1)*INTEGd%ERIcmol(:,iorb1,iorb,iorb1) ! any->iorb1,iorb->iorb1
+      else
+       ! Nth
+      endif
      endif
-    endif
-   enddo
-  else
-   iorbv= (iorb-1)*(INTEGd%NBF2+INTEGd%NBF3+INTEGd%NBF4)+1
-   iorbv1=(iorb-1)*(INTEGd%NBF2+INTEGd%NBF3+INTEGd%NBF4)+INTEGd%NBF2
-   ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+RDMd%DM2_iiii(iorb)*INTEGd%ERImolv(iorbv:iorbv1)   ! any->iorb,iorb->iorb
-   do iorb1=1,RDMd%NBF_occ
-    iorbv= (iorb1-1)*(INTEGd%NBF2+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF3+1
-    iorbv1=(iorb1-1)*(INTEGd%NBF2+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF3+INTEGd%NBF2
-    ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_J(iorb,iorb1)*INTEGd%ERImolv(iorbv:iorbv1) ! any->iorb,iorb1->iorb1
-    iorbv= (iorb1-1)*(INTEGd%NBF2+INTEGd%NBF3)+(iorb-1)*INTEGd%NBF4+1
-    iorbv1=(iorb1-1)*(INTEGd%NBF2+INTEGd%NBF3)+(iorb-1)*INTEGd%NBF4+INTEGd%NBF2
-    ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_K(iorb,iorb1)*INTEGd%ERImolv(iorbv:iorbv1) ! any->iorb1,iorb1->iorb
-    iorbv= (iorb1-1)*(INTEGd%NBF3+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF2+1
-    iorbv1=(iorb1-1)*(INTEGd%NBF3+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF2+INTEGd%NBF2
-    ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_L(iorb,iorb1)*INTEGd%ERImolv(iorbv:iorbv1) ! any->iorb1,iorb->iorb1
-   enddo
-  endif
- enddo 
+    enddo
+   else
+    iorbv= (iorb-1)*(INTEGd%NBF2+INTEGd%NBF3+INTEGd%NBF4)+1
+    iorbv1=(iorb-1)*(INTEGd%NBF2+INTEGd%NBF3+INTEGd%NBF4)+INTEGd%NBF2
+    ELAGd%LambdasC(iorb,:)=ELAGd%LambdasC(iorb,:)+RDMd%DM2_iiii(iorb)*INTEGd%ERIcmolv(iorbv:iorbv1)   ! any->iorb,iorb->iorb
+    do iorb1=1,RDMd%NBF_occ
+     iorbv= (iorb1-1)*(INTEGd%NBF2+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF3+1
+     iorbv1=(iorb1-1)*(INTEGd%NBF2+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF3+INTEGd%NBF2
+     ELAGd%LambdasC(iorb,:)=ELAGd%LambdasC(iorb,:)+DM2_J(iorb,iorb1)*INTEGd%ERIcmolv(iorbv:iorbv1) ! any->iorb,iorb1->iorb1
+     iorbv= (iorb1-1)*(INTEGd%NBF2+INTEGd%NBF3)+(iorb-1)*INTEGd%NBF4+1
+     iorbv1=(iorb1-1)*(INTEGd%NBF2+INTEGd%NBF3)+(iorb-1)*INTEGd%NBF4+INTEGd%NBF2
+     ELAGd%LambdasC(iorb,:)=ELAGd%LambdasC(iorb,:)+DM2_K(iorb,iorb1)*INTEGd%ERIcmolv(iorbv:iorbv1) ! any->iorb1,iorb1->iorb
+     iorbv= (iorb1-1)*(INTEGd%NBF3+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF2+1
+     iorbv1=(iorb1-1)*(INTEGd%NBF3+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF2+INTEGd%NBF2
+     ELAGd%LambdasC(iorb,:)=ELAGd%LambdasC(iorb,:)+DM2_L(iorb,iorb1)*INTEGd%ERIcmolv(iorbv:iorbv1) ! any->iorb1,iorb->iorb1
+    enddo
+   endif
+  enddo 
+ else
+  ELAGd%Lambdas=zero
+  do iorb=1,RDMd%NBF_occ
+   ELAGd%Lambdas(iorb,:)=RDMd%occ(iorb)*INTEGd%hCORE(:,iorb)                                          ! Init: Lambda_pq = n_p hCORE_qp
+   if(INTEGd%iERItyp/=-1) then
+    ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+RDMd%DM2_iiii(iorb)*INTEGd%ERImol(:,iorb,iorb,iorb)   ! any->iorb,iorb->iorb
+    do iorb1=1,RDMd%NBF_occ
+     if(iorb/=iorb1) then
+      if(INTEGd%iERItyp==0) then ! DoNOF notation {ij|lk}
+       ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_J(iorb,iorb1)*INTEGd%ERImol(:,iorb1,iorb1,iorb) ! any->iorb,iorb1->iorb1
+       ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_K(iorb,iorb1)*INTEGd%ERImol(:,iorb1,iorb,iorb1) ! any->iorb1,iorb1->iorb
+       ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_L(iorb,iorb1)*INTEGd%ERImol(:,iorb,iorb1,iorb1) ! any->iorb1,iorb->iorb1
+      elseif(INTEGd%iERItyp==1) then ! <ij|kl>
+       ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_J(iorb,iorb1)*INTEGd%ERImol(:,iorb1,iorb,iorb1) ! any->iorb,iorb1->iorb1
+       ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_K(iorb,iorb1)*INTEGd%ERImol(:,iorb1,iorb1,iorb) ! any->iorb1,iorb1->iorb
+       ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_L(iorb,iorb1)*INTEGd%ERImol(:,iorb,iorb1,iorb1) ! any->iorb1,iorb->iorb1
+      elseif(INTEGd%iERItyp==2) then ! (ik|jl)
+       ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_J(iorb,iorb1)*INTEGd%ERImol(:,iorb,iorb1,iorb1) ! any->iorb,iorb1->iorb1
+       ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_K(iorb,iorb1)*INTEGd%ERImol(:,iorb1,iorb1,iorb) ! any->iorb1,iorb1->iorb
+       ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_L(iorb,iorb1)*INTEGd%ERImol(:,iorb1,iorb,iorb1) ! any->iorb1,iorb->iorb1
+      else
+       ! Nth
+      endif
+     endif
+    enddo
+   else
+    iorbv= (iorb-1)*(INTEGd%NBF2+INTEGd%NBF3+INTEGd%NBF4)+1
+    iorbv1=(iorb-1)*(INTEGd%NBF2+INTEGd%NBF3+INTEGd%NBF4)+INTEGd%NBF2
+    ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+RDMd%DM2_iiii(iorb)*INTEGd%ERImolv(iorbv:iorbv1)   ! any->iorb,iorb->iorb
+    do iorb1=1,RDMd%NBF_occ
+     iorbv= (iorb1-1)*(INTEGd%NBF2+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF3+1
+     iorbv1=(iorb1-1)*(INTEGd%NBF2+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF3+INTEGd%NBF2
+     ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_J(iorb,iorb1)*INTEGd%ERImolv(iorbv:iorbv1) ! any->iorb,iorb1->iorb1
+     iorbv= (iorb1-1)*(INTEGd%NBF2+INTEGd%NBF3)+(iorb-1)*INTEGd%NBF4+1
+     iorbv1=(iorb1-1)*(INTEGd%NBF2+INTEGd%NBF3)+(iorb-1)*INTEGd%NBF4+INTEGd%NBF2
+     ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_K(iorb,iorb1)*INTEGd%ERImolv(iorbv:iorbv1) ! any->iorb1,iorb1->iorb
+     iorbv= (iorb1-1)*(INTEGd%NBF3+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF2+1
+     iorbv1=(iorb1-1)*(INTEGd%NBF3+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF2+INTEGd%NBF2
+     ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_L(iorb,iorb1)*INTEGd%ERImolv(iorbv:iorbv1) ! any->iorb1,iorb->iorb1
+    enddo
+   endif
+  enddo 
+ endif
  !ELAGd%Lambdas=two*ELAGd%Lambdas ! We only need half for 'alpha' orbs to define gradients
 
  ! TODO 
@@ -295,7 +370,7 @@ end subroutine build_elag
 !!
 !! SOURCE
 
-subroutine diag_lambda_ekt(ELAGd,RDMd,INTEGd,NO_COEF,ekt)
+subroutine diag_lambda_ekt(ELAGd,RDMd,INTEGd,NO_COEF,NO_COEFc,ekt)
 !Arguments ------------------------------------
 !scalars
  logical,optional,intent(in)::ekt
@@ -303,22 +378,30 @@ subroutine diag_lambda_ekt(ELAGd,RDMd,INTEGd,NO_COEF,ekt)
  type(rdm_t),intent(in)::RDMd
  type(integ_t),intent(in)::INTEGd
 !arrays
- real(dp),dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(in)::NO_COEF
+ real(dp),optional,dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(in)::NO_COEF
+ complex(dp),optional,dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(in)::NO_COEFc
 !Local variables ------------------------------
 !scalars
  integer::iorb,iorb1,lwork,info
- real(dp)::sqrt_occ_iorb,sqrt_occ_iorb1,tol6=1d-6
+ real(dp)::sqrt_occ_iorb,sqrt_occ_iorb1
 !arrays
  character(len=10)::coef_file
  character(len=200)::msg
  real(dp),allocatable,dimension(:)::Eigval,Eigval_nocc,Work
  real(dp),allocatable,dimension(:,:)::Eigvec,CANON_COEF
+ complex(dp),allocatable,dimension(:)::WorkC
+ complex(dp),allocatable,dimension(:,:)::EigvecC,CANON_COEFc
 !************************************************************************
 
- allocate(Eigvec(RDMd%NBF_tot,RDMd%NBF_tot),Eigval(RDMd%NBF_tot),Work(1))
- allocate(Eigval_nocc(RDMd%NBF_occ))
+ allocate(Eigval_nocc(RDMd%NBF_occ),Eigval(RDMd%NBF_tot))
  
- Eigvec=ELAGd%Lambdas
+ if(ELAGd%cpx_lambdas) then
+  allocate(EigvecC(RDMd%NBF_tot,RDMd%NBF_tot),WorkC(1))
+  EigvecC=ELAGd%LambdasC
+ else 
+  allocate(Eigvec(RDMd%NBF_tot,RDMd%NBF_tot),Work(1))
+  Eigvec=ELAGd%Lambdas
+ endif
 
  if(present(ekt)) then
   do iorb=1,RDMd%NBF_tot
@@ -327,25 +410,47 @@ subroutine diag_lambda_ekt(ELAGd,RDMd,INTEGd,NO_COEF,ekt)
      sqrt_occ_iorb =dsqrt(RDMd%occ(iorb))
      sqrt_occ_iorb1=dsqrt(RDMd%occ(iorb1))
      if((dabs(sqrt_occ_iorb)>tol6).and.(dabs(sqrt_occ_iorb1)>tol6)) then
-      Eigvec(iorb,iorb1)=Eigvec(iorb,iorb1)/(sqrt_occ_iorb*sqrt_occ_iorb1)
+      if(ELAGd%cpx_lambdas) then
+       EigvecC(iorb,iorb1)=EigvecC(iorb,iorb1)/(sqrt_occ_iorb*sqrt_occ_iorb1)
+      else
+       Eigvec(iorb,iorb1)=Eigvec(iorb,iorb1)/(sqrt_occ_iorb*sqrt_occ_iorb1)
+      endif
+     else
+      if(ELAGd%cpx_lambdas) then
+       EigvecC(iorb,iorb1)=complex_zero
+      else
+       Eigvec(iorb,iorb1)=zero
+      endif
+     endif
+    else
+     if(ELAGd%cpx_lambdas) then
+      EigvecC(iorb,iorb1)=complex_zero
      else
       Eigvec(iorb,iorb1)=zero
      endif
-    else
-     Eigvec(iorb,iorb1)=zero
     endif
    enddo
   enddo
  endif
 
  ! Diagonalize
- lwork=-1 
- call DSYEV('V','L',RDMd%NBF_tot,Eigvec,RDMd%NBF_tot,Eigval,Work,lwork,info)
- lwork=nint(Work(1))
- if(info==0) then
-  deallocate(Work)
-  allocate(Work(lwork)) 
+ lwork=-1
+ if(ELAGd%cpx_lambdas) then
+  call ZHEEV('V','L',RDMd%NBF_tot,EigvecC,RDMd%NBF_tot,Eigval,WorkC,lwork,info)
+  lwork=nint(real(WorkC(1)))
+  if(info==0) then
+   deallocate(WorkC)
+   allocate(WorkC(lwork)) 
+   call ZHEEV('V','L',RDMd%NBF_tot,EigvecC,RDMd%NBF_tot,Eigval,WorkC,lwork,info)
+  endif
+ else 
   call DSYEV('V','L',RDMd%NBF_tot,Eigvec,RDMd%NBF_tot,Eigval,Work,lwork,info)
+  lwork=nint(Work(1))
+  if(info==0) then
+   deallocate(Work)
+   allocate(Work(lwork)) 
+   call DSYEV('V','L',RDMd%NBF_tot,Eigvec,RDMd%NBF_tot,Eigval,Work,lwork,info)
+  endif
  endif
 
  ! Print final eigenvalues and orbs.
@@ -353,15 +458,26 @@ subroutine diag_lambda_ekt(ELAGd,RDMd,INTEGd,NO_COEF,ekt)
  call write_output(msg)
  if(present(ekt)) then
   Eigval=-Eigval
-  call dyson_orbs(RDMd,INTEGd,Eigvec,NO_COEF)
+  if(ELAGd%cpx_lambdas) then
+   call dyson_orbs(RDMd,INTEGd,EigvecC=EigvecC,NO_COEFc=NO_COEFc)
+  else
+   call dyson_orbs(RDMd,INTEGd,Eigvec=Eigvec,NO_COEF=NO_COEF)
+  endif
   write(msg,'(a)') 'EKT ionization potentials (a.u.)'
   call write_output(msg)
  else
   coef_file='CANON_COEF'
-  allocate(CANON_COEF(RDMd%NBF_tot,RDMd%NBF_tot))
-  CANON_COEF=matmul(NO_COEF,Eigvec)
-  call RDMd%print_orbs(CANON_COEF,coef_file)
-  deallocate(CANON_COEF)
+  if(ELAGd%cpx_lambdas) then
+   allocate(CANON_COEFc(RDMd%NBF_tot,RDMd%NBF_tot))
+   CANON_COEFc=matmul(NO_COEFc,EigvecC)
+   call RDMd%print_orbs(coef_file,COEFc=CANON_COEFc)
+   deallocate(CANON_COEFc)
+  else
+   allocate(CANON_COEF(RDMd%NBF_tot,RDMd%NBF_tot))
+   CANON_COEF=matmul(NO_COEF,Eigvec)
+   call RDMd%print_orbs(coef_file,COEF=CANON_COEF)
+   deallocate(CANON_COEF)
+  endif
   write(msg,'(a)') 'Canonical orbital eigenvalues (a.u.)'
   call write_output(msg)
  endif
@@ -377,7 +493,12 @@ subroutine diag_lambda_ekt(ELAGd,RDMd,INTEGd,NO_COEF,ekt)
  write(msg,'(a)') ' '
  call write_output(msg)
   
- deallocate(Eigvec,Work,Eigval,Eigval_nocc)
+ if(ELAGd%cpx_lambdas) then
+  deallocate(EigvecC,WorkC)
+ else
+  deallocate(Eigvec,Work)
+ endif
+ deallocate(Eigval,Eigval_nocc)
 
 end subroutine diag_lambda_ekt
 !!***
@@ -403,49 +524,91 @@ end subroutine diag_lambda_ekt
 !!
 !! SOURCE
 
-subroutine dyson_orbs(RDMd,INTEGd,Eigvec,NO_COEF)
+subroutine dyson_orbs(RDMd,INTEGd,Eigvec,NO_COEF,EigvecC,NO_COEFc)
 !Arguments ------------------------------------
 !scalars
  type(rdm_t),intent(in)::RDMd
  type(integ_t),intent(in)::INTEGd
 !arrays
- real(dp),dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(in)::Eigvec,NO_COEF
+ real(dp),optional,dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(in)::Eigvec,NO_COEF
+ complex(dp),optional,dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(in)::EigvecC,NO_COEFc
 !Local variables ------------------------------
 !scalars
+ logical::cpx_mos=.false.
  integer::iorb,iorb1,iorb2
 !arrays
  character(len=10)::coef_file
  character(len=200)::msg
  real(dp),allocatable,dimension(:)::DYSON_OCC
  real(dp),allocatable,dimension(:,:)::DYSON_COEF
+ complex(dp),allocatable,dimension(:)::DYSON_OCCc
+ complex(dp),allocatable,dimension(:,:)::DYSON_COEFc
 !************************************************************************
- allocate(DYSON_COEF(RDMd%NBF_tot,RDMd%NBF_tot),DYSON_OCC(RDMd%NBF_occ))
- DYSON_COEF=zero; DYSON_OCC=zero;
- ! Unnormalized DYSON_COEF
- do iorb=1,RDMd%NBF_tot
-  do iorb1=1,RDMd%NBF_occ
-   DYSON_COEF(iorb,iorb1)=zero
-   do iorb2=1,RDMd%NBF_occ
-    DYSON_COEF(iorb,iorb1)=DYSON_COEF(iorb,iorb1)+dsqrt(RDMd%occ(iorb2))*NO_COEF(iorb,iorb2)*Eigvec(iorb2,iorb1)
+
+ allocate(DYSON_OCC(RDMd%NBF_occ))
+ if(present(EigvecC).and.present(NO_COEFc)) cpx_mos=.true.
+ ! Compute DYSON_COEFs
+ if(cpx_mos) then
+  allocate(DYSON_OCCc(RDMd%NBF_occ))
+  allocate(DYSON_COEFc(RDMd%NBF_tot,RDMd%NBF_tot))
+  DYSON_COEFc=complex_zero; DYSON_OCCc=complex_zero;
+  ! Unnormalized DYSON_COEF
+  do iorb=1,RDMd%NBF_tot
+   do iorb1=1,RDMd%NBF_occ
+    DYSON_COEFc(iorb,iorb1)=complex_zero
+    do iorb2=1,RDMd%NBF_occ
+     DYSON_COEFc(iorb,iorb1)=DYSON_COEFc(iorb,iorb1)+dsqrt(RDMd%occ(iorb2))*NO_COEFc(iorb,iorb2)*EigvecC(iorb2,iorb1)
+    enddo
    enddo
   enddo
- enddo 
- ! Occ numbers of DYSON_COEF
- do iorb=1,RDMd%NBF_occ
-  DYSON_OCC(iorb)=zero
-  do iorb1=1,RDMd%NBF_tot
-   DYSON_OCC(iorb)=DYSON_OCC(iorb)+DYSON_COEF(iorb1,iorb)*sum(INTEGd%Overlap(iorb1,:)*DYSON_COEF(:,iorb))
+  ! Occ numbers of DYSON_COEF
+  do iorb=1,RDMd%NBF_occ
+   DYSON_OCCc(iorb)=complex_zero
+   do iorb1=1,RDMd%NBF_tot
+    DYSON_OCCc(iorb)=DYSON_OCCc(iorb)+conjg(DYSON_COEFc(iorb1,iorb))*sum(INTEGd%Overlap(iorb1,:)*DYSON_COEFc(:,iorb))
+   enddo
   enddo
- enddo
- ! Normalized DYSON_COEF
- do iorb=1,RDMd%NBF_occ
-  do iorb1=1,RDMd%NBF_tot
-   DYSON_COEF(iorb1,iorb)=DYSON_COEF(iorb1,iorb)/dsqrt(DYSON_OCC(iorb))
+  ! Normalized DYSON_COEF
+  do iorb=1,RDMd%NBF_occ
+   do iorb1=1,RDMd%NBF_tot
+    DYSON_COEFc(iorb1,iorb)=DYSON_COEFc(iorb1,iorb)/cdsqrt(DYSON_OCCc(iorb))
+   enddo
   enddo
- enddo
- ! Print DYSON_COEF
- coef_file='DYSON_COEF'
- call RDMd%print_orbs(DYSON_COEF,coef_file)
+  ! Print DYSON_COEF
+  coef_file='DYSON_COEF'
+  call RDMd%print_orbs(coef_file,COEFc=DYSON_COEFc)
+  DYSON_OCC(:)=real(DYSON_OCCc(:))
+  deallocate(DYSON_COEFc,DYSON_OCCc)
+ else
+  allocate(DYSON_COEF(RDMd%NBF_tot,RDMd%NBF_tot))
+  DYSON_COEF=zero; DYSON_OCC=zero;
+  ! Unnormalized DYSON_COEF
+  do iorb=1,RDMd%NBF_tot
+   do iorb1=1,RDMd%NBF_occ
+    DYSON_COEF(iorb,iorb1)=zero
+    do iorb2=1,RDMd%NBF_occ
+     DYSON_COEF(iorb,iorb1)=DYSON_COEF(iorb,iorb1)+dsqrt(RDMd%occ(iorb2))*NO_COEF(iorb,iorb2)*Eigvec(iorb2,iorb1)
+    enddo
+   enddo
+  enddo 
+  ! Occ numbers of DYSON_COEF
+  do iorb=1,RDMd%NBF_occ
+   DYSON_OCC(iorb)=zero
+   do iorb1=1,RDMd%NBF_tot
+    DYSON_OCC(iorb)=DYSON_OCC(iorb)+DYSON_COEF(iorb1,iorb)*sum(INTEGd%Overlap(iorb1,:)*DYSON_COEF(:,iorb))
+   enddo
+  enddo
+  ! Normalized DYSON_COEF
+  do iorb=1,RDMd%NBF_occ
+   do iorb1=1,RDMd%NBF_tot
+    DYSON_COEF(iorb1,iorb)=DYSON_COEF(iorb1,iorb)/dsqrt(DYSON_OCC(iorb))
+   enddo
+  enddo
+  ! Print DYSON_COEF
+  coef_file='DYSON_COEF'
+  call RDMd%print_orbs(coef_file,COEF=DYSON_COEF)
+  deallocate(DYSON_COEF)
+ endif
  ! Print DYSON occ. numbers
  DYSON_OCC(:)=two*DYSON_OCC(:)
  write(msg,'(a,f10.5,a)') 'Dyson occ ',sum(DYSON_OCC(:)),'. Dyson occ. numbers '
@@ -457,8 +620,9 @@ subroutine dyson_orbs(RDMd,INTEGd,Eigvec,NO_COEF)
  iorb=(RDMd%NBF_occ/10)*10+1
  write(msg,'(f12.6,*(f11.6))') DYSON_OCC(iorb:)
  call write_output(msg)
- ! Deallocate arrays
- deallocate(DYSON_COEF,DYSON_OCC)
+
+ ! Deallocate array
+ deallocate(DYSON_OCC)
 
 end subroutine dyson_orbs
 !!***
@@ -491,10 +655,18 @@ subroutine wipeout_diis(ELAGd)
 !************************************************************************
 
  ELAGd%idiis=0
- if(ELAGd%ndiis>0) then
-  ELAGd%Coef_DIIS=zero
-  ELAGd%F_DIIS=zero
-  ELAGd%DIIS_mat=zero
+ if(ELAGd%cpx_lambdas) then
+  if(ELAGd%ndiis>0) then
+   ELAGd%Coef_DIISc=complex_zero
+   ELAGd%F_DIISc=complex_zero
+   ELAGd%DIIS_matC=complex_zero
+  endif
+ else
+  if(ELAGd%ndiis>0) then
+   ELAGd%Coef_DIIS=zero
+   ELAGd%F_DIIS=zero
+   ELAGd%DIIS_mat=zero
+  endif
  endif 
 
 end subroutine wipeout_diis
