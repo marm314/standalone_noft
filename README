@@ -38,7 +38,7 @@ By calling the subroutine run_noft
 
       subroutine run_noft(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,&
       &  Ncoupled,Nbeta_elect,Nalpha_elect,iERItyp,imethocc,imethorb,itermax,iprintdmn,iprintints,&
-      &  itolLambda,ndiis,Enof,tolE,Vnn,NO_COEF,AOverlap,Occ,mo_ints,ofile_name,&
+      &  itolLambda,ndiis,Enof,tolE,Vnn,AOverlap,Occ,mo_ints,ofile_name,NO_COEF,NO_COEFc,&
       &  lowmemERI,restart,ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag)   ! Optional
 
 the initialization parameters are
@@ -61,7 +61,8 @@ the initialization parameters are
     ndiis=Numb. of iter. used in orb. opt. to call DIIS
     tolE=Tolerance on energy convergence
     Vnn=Fixed nuclear-nuclear interaction energy
-    NO_COEF=Guess NO coefs (probably HF ones). In the end, the optimized orbitals.
+    NO_COEF=Guess NO coefs (probably HF ones). In the end, the optimized orbitals (real 'optional'). Incompatible with NO_COEFc.
+    NO_COEFc=Guess NO coefs (probably HF ones). In the end, the optimized orbitals (complex 'optional'). Incompatible with NO_COEF.
     AOverlap=Overlap of atomic orbs. (matrix)
     Occ=Optimized occ numbers. 
     mo_ints=External subroutine that for given NO_COEF updates the hCORE and ERImol matrices
