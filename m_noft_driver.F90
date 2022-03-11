@@ -88,7 +88,7 @@ contains
 
 subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
 &  Ncoupled_in,Nbeta_elect_in,Nalpha_elect_in,iERItyp_in,imethocc,imethorb,itermax,iprintdmn,iprintswdmn,&
-&  iprintints,itolLambda,ndiis,Enof,tolE_in,Vnn,AOverlap_in,Occ_inout,mo_ints,ofile_name,NO_COEF,NO_COEFc,&
+&  iprintints,itolLambda,ndiis,Enof,tolE_in,Vnn,AOverlap_in,Occ_inout,mo_ints,ofile_name,NO_COEF,NO_COEF_cmplx,&
 &  lowmemERI,restart,ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,iNOTupdateOCC,iNOTupdateORB,Lpower,fcidump)   ! Optional
 !Arguments ------------------------------------
 !scalars
@@ -101,7 +101,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  real(dp),intent(in)::Vnn,tolE_in
  real(dp),intent(inout)::Enof
  interface
-  subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,NO_COEF,hCORE,ERImol,ERImolv,NO_COEFc,hCOREc,ERIcmol,ERIcmolv)
+  subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,NO_COEF,hCORE,ERImol,ERImolv,NO_COEF_cmplx,hCORE_cmplx,ERImol_cmplx,ERImolv_cmplx)
   use m_definitions
   implicit none
   integer,intent(in)::NBF_tot,NBF_occ,NBF_jkl
@@ -109,10 +109,10 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
   real(dp),optional,intent(inout)::hCORE(NBF_tot,NBF_tot)
   real(dp),optional,intent(inout)::ERImol(NBF_tot,NBF_jkl,NBF_jkl,NBF_jkl)
   real(dp),optional,intent(inout)::ERImolv(NBF_tot*NBF_jkl*NBF_jkl*NBF_jkl)
-  complex(dp),optional,intent(in)::NO_COEFc(NBF_tot,NBF_tot)
-  complex(dp),optional,intent(inout)::hCOREc(NBF_tot,NBF_tot)
-  complex(dp),optional,intent(inout)::ERIcmol(NBF_tot,NBF_jkl,NBF_jkl,NBF_jkl)
-  complex(dp),optional,intent(inout)::ERIcmolv(NBF_tot*NBF_jkl*NBF_jkl*NBF_jkl)
+  complex(dp),optional,intent(in)::NO_COEF_cmplx(NBF_tot,NBF_tot)
+  complex(dp),optional,intent(inout)::hCORE_cmplx(NBF_tot,NBF_tot)
+  complex(dp),optional,intent(inout)::ERImol_cmplx(NBF_tot,NBF_jkl,NBF_jkl,NBF_jkl)
+  complex(dp),optional,intent(inout)::ERImolv_cmplx(NBF_tot*NBF_jkl*NBF_jkl*NBF_jkl)
   end subroutine mo_ints
  end interface
 !arrays
@@ -120,7 +120,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  real(dp),dimension(NBF_tot_in),intent(inout)::Occ_inout
  real(dp),dimension(NBF_tot_in,NBF_tot_in),intent(in)::AOverlap_in
  real(dp),optional,dimension(NBF_tot_in,NBF_tot_in),intent(inout)::NO_COEF
- complex(dp),optional,dimension(NBF_tot_in,NBF_tot_in),intent(inout)::NO_COEFc
+ complex(dp),optional,dimension(NBF_tot_in,NBF_tot_in),intent(inout)::NO_COEF_cmplx
 !Local variables ------------------------------
 !scalars
  logical::ekt,diagLpL,restart_param,keep_occs,keep_orbs,cpx_mos
@@ -147,7 +147,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  endif
 
  ! Check if we use complex orbs
- if(present(NO_COEFc)) cpx_mos=.true.
+ if(present(NO_COEF_cmplx)) cpx_mos=.true.
 
  ! Write Header
  call write_header(sha_git)
@@ -203,7 +203,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
   write(msg,'(a)') ' '
   call write_output(msg)
   if(cpx_mos) then
-   call read_restart(RDMd,ELAGd,ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,NO_COEFc=NO_COEFc)
+   call read_restart(RDMd,ELAGd,ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,NO_COEF_cmplx=NO_COEF_cmplx)
   else
    call read_restart(RDMd,ELAGd,ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,NO_COEF=NO_COEF)
   endif
@@ -224,15 +224,15 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  iter=-1;
  if(cpx_mos) then
   if(INTEGd%iERItyp/=-1) then
-   call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,NO_COEFc=NO_COEFc,hCOREc=INTEGd%hCOREc, &
-  & ERIcmol=INTEGd%ERIcmol)
+   call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,NO_COEF_cmplx=NO_COEF_cmplx,hCORE_cmplx=INTEGd%hCORE_cmplx, &
+  & ERImol_cmplx=INTEGd%ERImol_cmplx)
   else
-   call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,NO_COEFc=NO_COEFc,hCOREc=INTEGd%hCOREc, &
-  & ERIcmolv=INTEGd%ERIcmolv)
+   call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,NO_COEF_cmplx=NO_COEF_cmplx,hCORE_cmplx=INTEGd%hCORE_cmplx, &
+  & ERImolv_cmplx=INTEGd%ERImolv_cmplx)
   endif
   call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-  call opt_occ(iter,imethocc,keep_occs,RDMd,Vnn,Energy,hCOREc=INTEGd%hCOREc,ERIc_J=INTEGd%ERIc_J, &
-  & ERIc_K=INTEGd%ERIc_K,ERIc_L=INTEGd%ERIc_L) ! Also iter=iter+1
+  call opt_occ(iter,imethocc,keep_occs,RDMd,Vnn,Energy,hCORE_cmplx=INTEGd%hCORE_cmplx,ERI_J_cmplx=INTEGd%ERI_J_cmplx, &
+  & ERI_K_cmplx=INTEGd%ERI_K_cmplx,ERI_L_cmplx=INTEGd%ERI_L_cmplx) ! Also iter=iter+1
  else
   if(INTEGd%iERItyp/=-1) then
    call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,NO_COEF=NO_COEF,hCORE=INTEGd%hCORE, &
@@ -262,7 +262,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
   if(.not.keep_orbs) then
    call ELAGd%clean_diis()
    if(cpx_mos) then
-    call opt_orb(iter,imethorb,ELAGd,RDMd,INTEGd,Vnn,Energy,mo_ints,NO_COEFc=NO_COEFc)
+    call opt_orb(iter,imethorb,ELAGd,RDMd,INTEGd,Vnn,Energy,mo_ints,NO_COEF_cmplx=NO_COEF_cmplx)
    else   
     call opt_orb(iter,imethorb,ELAGd,RDMd,INTEGd,Vnn,Energy,mo_ints,NO_COEF=NO_COEF)
    endif
@@ -271,15 +271,15 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
    endif
   endif
   if(cpx_mos) then
-   call RDMd%print_orbs_bin(COEFc=NO_COEFc)
+   call RDMd%print_orbs_bin(COEF_cmplx=NO_COEF_cmplx)
   else
    call RDMd%print_orbs_bin(COEF=NO_COEF)
   endif
 
   ! Occ. optimization
   if(cpx_mos) then
-   call opt_occ(iter,imethocc,keep_occs,RDMd,Vnn,Energy,hCOREc=INTEGd%hCOREc,ERIc_J=INTEGd%ERIc_J, &
-   & ERIc_K=INTEGd%ERIc_K,ERIc_L=INTEGd%ERIc_L) ! Also iter=iter+1
+   call opt_occ(iter,imethocc,keep_occs,RDMd,Vnn,Energy,hCORE_cmplx=INTEGd%hCORE_cmplx,ERI_J_cmplx=INTEGd%ERI_J_cmplx, &
+   & ERI_K_cmplx=INTEGd%ERI_K_cmplx,ERI_L_cmplx=INTEGd%ERI_L_cmplx) ! Also iter=iter+1
   else
    call opt_occ(iter,imethocc,keep_occs,RDMd,Vnn,Energy,hCORE=INTEGd%hCORE,ERI_J=INTEGd%ERI_J, &
    & ERI_K=INTEGd%ERI_K,ERI_L=INTEGd%ERI_L) ! Also iter=iter+1
@@ -316,7 +316,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
 
  ! Print final diagonalized INTEGd%Lambdas values
  if(cpx_mos) then
-  call ELAGd%diag_lag(RDMd,INTEGd,NO_COEFc=NO_COEFc)
+  call ELAGd%diag_lag(RDMd,INTEGd,NO_COEF_cmplx=NO_COEF_cmplx)
  else
   call ELAGd%diag_lag(RDMd,INTEGd,NO_COEF=NO_COEF)
  endif
@@ -324,7 +324,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  ! Print final Extended Koopmans' Theorem (EKT) values
  if(RDMd%Nsingleocc==0) then
   if(cpx_mos) then
-   call ELAGd%diag_lag(RDMd,INTEGd,NO_COEFc=NO_COEFc,ekt=ekt)
+   call ELAGd%diag_lag(RDMd,INTEGd,NO_COEF_cmplx=NO_COEF_cmplx,ekt=ekt)
   else
    call ELAGd%diag_lag(RDMd,INTEGd,NO_COEF=NO_COEF,ekt=ekt)
   endif
@@ -351,8 +351,8 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  ! Print optimized nat. orb. coef.
  coef_file='NO_COEF'
  if(cpx_mos) then
-  call RDMd%print_orbs(coef_file,COEFc=NO_COEFc)
-  call RDMd%print_orbs_bin(COEFc=NO_COEFc)
+  call RDMd%print_orbs(coef_file,COEF_cmplx=NO_COEF_cmplx)
+  call RDMd%print_orbs_bin(COEF_cmplx=NO_COEF_cmplx)
  else
   call RDMd%print_orbs(coef_file,COEF=NO_COEF)
   call RDMd%print_orbs_bin(COEF=NO_COEF)
@@ -360,7 +360,8 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
 
  ! Calculate the chem. pot. = d E / d occ
  if(cpx_mos) then
-  call occ_chempot(RDMd,hCOREc=INTEGd%hCOREc,ERIc_J=INTEGd%ERIc_J,ERIc_K=INTEGd%ERIc_K,ERIc_L=INTEGd%ERIc_L)
+  call occ_chempot(RDMd,hCORE_cmplx=INTEGd%hCORE_cmplx,ERI_J_cmplx=INTEGd%ERI_J_cmplx,&
+  & ERI_K_cmplx=INTEGd%ERI_K_cmplx,ERI_L_cmplx=INTEGd%ERI_L_cmplx)
  else 
   call occ_chempot(RDMd,hCORE=INTEGd%hCORE,ERI_J=INTEGd%ERI_J,ERI_K=INTEGd%ERI_K,ERI_L=INTEGd%ERI_L)
  endif
@@ -391,7 +392,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  hONEbody=zero
  if(cpx_mos) then
   do iorb=1,RDMd%NBF_occ
-   hONEbody=hONEbody+RDMd%occ(iorb)*real(INTEGd%hCOREc(iorb,iorb))
+   hONEbody=hONEbody+RDMd%occ(iorb)*real(INTEGd%hCORE_cmplx(iorb,iorb))
   enddo
  else
   do iorb=1,RDMd%NBF_occ
@@ -631,7 +632,7 @@ end subroutine echo_input
 !!
 !! SOURCE
 
-subroutine read_restart(RDMd,ELAGd,ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,NO_COEF,NO_COEFc)
+subroutine read_restart(RDMd,ELAGd,ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,NO_COEF,NO_COEF_cmplx)
 !Arguments ------------------------------------
 !scalars
  integer,intent(in)::ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag
@@ -639,7 +640,7 @@ subroutine read_restart(RDMd,ELAGd,ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,NO_
  type(rdm_t),intent(inout)::RDMd
 !arrays
  real(dp),optional,dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(inout)::NO_COEF
- complex(dp),optional,dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(inout)::NO_COEFc
+ complex(dp),optional,dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(inout)::NO_COEF_cmplx
 !Local variables ------------------------------
 !scalars
  integer::iunit=310,istat,intvar,intvar1,icount
@@ -647,15 +648,15 @@ subroutine read_restart(RDMd,ELAGd,ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,NO_
  complex(dp)::cpxvar
  real(dp),allocatable,dimension(:)::GAMMAS_in,tmp_occ
  real(dp),allocatable,dimension(:,:)::NO_COEF_in
- complex(dp),allocatable,dimension(:,:)::NO_COEFc_in
+ complex(dp),allocatable,dimension(:,:)::NO_COEF_cmplx_in
 !arrays
  character(len=200)::msg
 !************************************************************************
 
  ! Read NO_COEF for guess
- if(present(NO_COEFc)) then
+ if(present(NO_COEF_cmplx)) then
   if(ireadCOEF==1) then
-   allocate(NO_COEFc_in(RDMd%NBF_tot,RDMd%NBF_tot))
+   allocate(NO_COEF_cmplx_in(RDMd%NBF_tot,RDMd%NBF_tot))
    open(unit=iunit,form='unformatted',file='NO_COEF_BIN',iostat=istat,status='old')
    icount=0
    if(istat==0) then
@@ -665,7 +666,7 @@ subroutine read_restart(RDMd,ELAGd,ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,NO_
       exit
      endif
      if(((intvar/=0).and.(intvar1/=0)).and.intvar*intvar1<=RDMd%NBF_tot*RDMd%NBF_tot) then
-      NO_COEFc_in(intvar,intvar1)=cpxvar
+      NO_COEF_cmplx_in(intvar,intvar1)=cpxvar
       icount=icount+1
      else
       exit
@@ -673,12 +674,12 @@ subroutine read_restart(RDMd,ELAGd,ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,NO_
     enddo
    endif
    if(icount==RDMd%NBF_tot*RDMd%NBF_tot) then
-    NO_COEFc(:,:)=NO_COEFc_in(:,:)
+    NO_COEF_cmplx(:,:)=NO_COEF_cmplx_in(:,:)
     write(msg,'(a)') 'NO coefs. read from checkpoint file'
     call write_output(msg)
    endif
    close(iunit)
-   deallocate(NO_COEFc_in)
+   deallocate(NO_COEF_cmplx_in)
   endif
  else
   if(ireadCOEF==1) then

@@ -451,14 +451,14 @@ end subroutine print_swrdm
 !!
 !! SOURCE
 
-subroutine print_orb_coefs(RDMd,name_file,COEF,COEFc)
+subroutine print_orb_coefs(RDMd,name_file,COEF,COEF_cmplx)
 !Arguments ------------------------------------
 !scalars
  class(rdm_t),intent(in)::RDMd
 !arrays
  character(len=10)::name_file 
  real(dp),optional,dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(in)::COEF
- complex(dp),optional,dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(in)::COEFc
+ complex(dp),optional,dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(in)::COEF_cmplx
 !Local variables ------------------------------
 !scalars
  logical::cpx_mos=.false.
@@ -467,22 +467,22 @@ subroutine print_orb_coefs(RDMd,name_file,COEF,COEFc)
 
 !************************************************************************
 
- if(present(COEFc)) cpx_mos=.true.
+ if(present(COEF_cmplx)) cpx_mos=.true.
  ! Print the orb. coefs
  open(unit=iunit,form='formatted',file=name_file)
  do iorb=1,RDMd%NBF_tot
   do iorb1=1,(RDMd%NBF_tot/10)*10,10
    if(cpx_mos) then
-    write(iunit,'(f14.8,9f13.8)') real(COEFc(iorb1:iorb1+9,iorb))
-    write(iunit,'(f14.8,9f13.8)') aimag(COEFc(iorb1:iorb1+9,iorb))
+    write(iunit,'(f14.8,9f13.8)') real(COEF_cmplx(iorb1:iorb1+9,iorb))
+    write(iunit,'(f14.8,9f13.8)') aimag(COEF_cmplx(iorb1:iorb1+9,iorb))
    else
     write(iunit,'(f14.8,9f13.8)') COEF(iorb1:iorb1+9,iorb)
    endif
   enddo
   iorb1=(RDMd%NBF_tot/10)*10+1
   if(cpx_mos) then
-    write(iunit,'(f14.8,*(f13.8))') real(COEFc(iorb1:,iorb))
-    write(iunit,'(f14.8,*(f13.8))') aimag(COEFc(iorb1:,iorb))
+    write(iunit,'(f14.8,*(f13.8))') real(COEF_cmplx(iorb1:,iorb))
+    write(iunit,'(f14.8,*(f13.8))') aimag(COEF_cmplx(iorb1:,iorb))
   else
    write(iunit,'(f14.8,*(f13.8))') COEF(iorb1:,iorb)
   endif
@@ -511,13 +511,13 @@ end subroutine print_orb_coefs
 !!
 !! SOURCE
 
-subroutine print_orb_coefs_bin(RDMd,COEF,COEFc)
+subroutine print_orb_coefs_bin(RDMd,COEF,COEF_cmplx)
 !Arguments ------------------------------------
 !scalars
  class(rdm_t),intent(in)::RDMd
 !arrays
  real(dp),optional,dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(in)::COEF
- complex(dp),optional,dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(in)::COEFc
+ complex(dp),optional,dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(in)::COEF_cmplx
 !Local variables ------------------------------
 !scalars
  logical::cpx_mos=.false.
@@ -526,13 +526,13 @@ subroutine print_orb_coefs_bin(RDMd,COEF,COEFc)
 
 !************************************************************************
  
- if(present(COEFc)) cpx_mos=.true.
+ if(present(COEF_cmplx)) cpx_mos=.true.
  ! Print the orb. coefs
  open(unit=iunit,form='unformatted',file='NO_COEF_BIN')
  do iorb=1,RDMd%NBF_tot
   do iorb1=1,RDMd%NBF_tot
    if(cpx_mos) then
-    write(iunit) iorb,iorb1,COEFc(iorb,iorb1)
+    write(iunit) iorb,iorb1,COEF_cmplx(iorb,iorb1)
    else
     write(iunit) iorb,iorb1,COEF(iorb,iorb1)
    endif
