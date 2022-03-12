@@ -34,7 +34,7 @@ module m_e_grad_occ_cpx
  private :: dm2_x_eri_cmplx,Ddm2_gamma_x_ERI_cmplx
 !!***
 
- public :: calc_E_occ_cmplx,calc_Grad_occ_cmplx,calc_Chem_pot_cmplx
+ public :: calc_E_occ_cmplx,calc_Grad_occ_cmplx,num_calc_Grad_occ_cmplx,calc_Chem_pot_cmplx
 !!***
 
 contains
@@ -54,7 +54,7 @@ contains
 !!  ERI_J=Lower triangular part of the J_pq matrix
 !!  ERI_K=Lower triangular part of the K_pq matrix
 !!  ERI_L=Lower triangular part of the L_pq matrix
-!!  nogamma=Do not build OCC, DM2_J, DM2_K, etc from GAMMAs (use the stored ones).
+!!  nogamma=Do not build Occ, DM2_J, DM2_K, etc from GAMMAs (use the stored ones).
 !!  chempot=Create the DM2 and the DDM2_w.r.t_occs matrices.
 !!
 !! OUTPUT
@@ -261,6 +261,75 @@ subroutine calc_Grad_occ_cmplx(RDMd,Grad,hCORE_cmplx,ERI_J_cmplx,ERI_K_cmplx,ERI
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 end subroutine calc_Grad_occ_cmplx
+!!***
+
+!!***
+!!****f* DoNOF/num_calc_Grad_occ_cmplx
+!! NAME
+!!  num_calc_Grad_occ_cmplx
+!!
+!! FUNCTION
+!!  Calculate the (numerical) Gradient of the energy from gamma independent parameters 
+!!
+!! INPUTS
+!!  GAMMAs=Indep. variables used in the occ. optimization 
+!!  hCORE=One-body integrals (h_pq) we only use the diag part (h_pp)
+!!  ERI_J=Lower triangular part of the J_pq matrix
+!!  ERI_K=Lower triangular part of the K_pq matrix
+!!  ERI_L=Lower triangular part of the L_pq matrix
+!!
+!! OUTPUT
+!!  Energy=Energy computed from the occs (actually from gammas)
+!!
+!! PARENTS
+!!  
+!! CHILDREN
+!!
+!! SOURCE
+
+subroutine num_calc_Grad_occ_cmplx(RDMd,GAMMAs,Grad,hCORE_cmplx,ERI_J_cmplx,ERI_K_cmplx,ERI_L_cmplx) 
+!Arguments ------------------------------------
+!scalars
+ type(rdm_t),intent(inout)::RDMd
+ real(dp),dimension(RDMd%Ngammas),intent(inout)::Grad
+!arrays
+ complex(dp),dimension(RDMd%NBF_ldiag),intent(in)::ERI_J_cmplx,ERI_K_cmplx,ERI_L_cmplx 
+ complex(dp),dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(in)::hCORE_cmplx
+ real(dp),dimension(RDMd%Ngammas),intent(in)::GAMMAs
+!Local variables ------------------------------
+!scalars
+ integer::igamma
+ real(dp)::Energy_num,grad_igamma,step=tol3
+!arrays
+ real(dp),allocatable,dimension(:)::GAMMAs_num
+!************************************************************************
+ 
+ allocate(GAMMAs_num(RDMd%Ngammas)) 
+ Grad = zero
+ do igamma=1,RDMd%Ngammas
+  GAMMAs_num=GAMMAs;
+  ! 2*step
+  GAMMAS_num(igamma)=GAMMAS_num(igamma)+two*step
+  call calc_E_occ_cmplx(RDMd,GAMMAs_num,Energy_num,hCORE_cmplx,ERI_J_cmplx,ERI_K_cmplx,ERI_L_cmplx)
+  grad_igamma=-Energy_num
+  ! step
+  GAMMAS_num(igamma)=GAMMAS_num(igamma)-step
+  call calc_E_occ_cmplx(RDMd,GAMMAs_num,Energy_num,hCORE_cmplx,ERI_J_cmplx,ERI_K_cmplx,ERI_L_cmplx)
+  grad_igamma=grad_igamma+eight*Energy_num
+  ! -step 
+  GAMMAS_num(igamma)=GAMMAS_num(igamma)-two*step
+  call calc_E_occ_cmplx(RDMd,GAMMAs_num,Energy_num,hCORE_cmplx,ERI_J_cmplx,ERI_K_cmplx,ERI_L_cmplx)
+  grad_igamma=grad_igamma-eight*Energy_num
+  ! -2step 
+  GAMMAS_num(igamma)=GAMMAS_num(igamma)-step
+  call calc_E_occ_cmplx(RDMd,GAMMAs_num,Energy_num,hCORE_cmplx,ERI_J_cmplx,ERI_K_cmplx,ERI_L_cmplx)
+  grad_igamma=grad_igamma+Energy_num
+  ! Save the gradient
+  Grad(igamma)=grad_igamma/(twelve*step)
+ enddo
+ deallocate(GAMMAs_num) 
+
+end subroutine num_calc_Grad_occ_cmplx
 !!***
 
 !!***

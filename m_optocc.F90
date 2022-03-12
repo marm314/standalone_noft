@@ -101,9 +101,11 @@ subroutine opt_occ(iter,imethod,keep_occs,RDMd,Vnn,Energy,hCORE,ERI_J,ERI_K,ERI_
  if(cpx_mos) then
   call calc_E_occ_cmplx(RDMd,GAMMAs,Energy,hCORE_cmplx,ERI_J_cmplx,ERI_K_cmplx,ERI_L_cmplx)
   call calc_Grad_occ_cmplx(RDMd,Grad_GAMMAs,hCORE_cmplx,ERI_J_cmplx,ERI_K_cmplx,ERI_L_cmplx)
+  !call num_calc_Grad_occ_cmplx(RDMd,GAMMAs,Grad_GAMMAs,hCORE_cmplx,ERI_J_cmplx,ERI_K_cmplx,ERI_L_cmplx)
  else
   call calc_E_occ(RDMd,GAMMAs,Energy,hCORE,ERI_J,ERI_K,ERI_L)
   call calc_Grad_occ(RDMd,Grad_GAMMAs,hCORE,ERI_J,ERI_K,ERI_L)
+  !call num_calc_Grad_occ(RDMd,GAMMAs,Grad_GAMMAs,hCORE,ERI_J,ERI_K,ERI_L)
  endif
  conveg=.true.
  do igamma=1,RDMd%Ngammas
@@ -128,9 +130,11 @@ subroutine opt_occ(iter,imethod,keep_occs,RDMd,Vnn,Energy,hCORE,ERI_J,ERI_K,ERI_
     if(cpx_mos) then
      call calc_E_occ_cmplx(RDMd,GAMMAs,Energy,hCORE_cmplx,ERI_J_cmplx,ERI_K_cmplx,ERI_L_cmplx)
      call calc_Grad_occ_cmplx(RDMd,Grad_GAMMAs,hCORE_cmplx,ERI_J_cmplx,ERI_K_cmplx,ERI_L_cmplx)
+     !call num_calc_Grad_occ_cmplx(RDMd,GAMMAs,Grad_GAMMAs,hCORE_cmplx,ERI_J_cmplx,ERI_K_cmplx,ERI_L_cmplx)
     else
      call calc_E_occ(RDMd,GAMMAs,Energy,hCORE,ERI_J,ERI_K,ERI_L)
      call calc_Grad_occ(RDMd,Grad_GAMMAs,hCORE,ERI_J,ERI_K,ERI_L)
+     !call num_calc_Grad_occ(RDMd,GAMMAs,Grad_GAMMAs,hCORE,ERI_J,ERI_K,ERI_L)
     endif
     call LBFGS_INTERN(RDMd%Ngammas,Mtosave,GAMMAs,Energy,Grad_GAMMAs,diagco,diag,info_print,tol5,tol16,Work,iflag)
     if(iflag<=0) exit

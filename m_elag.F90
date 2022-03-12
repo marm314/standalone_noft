@@ -541,19 +541,19 @@ subroutine dyson_orbs(RDMd,INTEGd,Eigvec,NO_COEF,EigvecC,NO_COEF_cmplx)
 !arrays
  character(len=10)::coef_file
  character(len=200)::msg
- real(dp),allocatable,dimension(:)::DYSON_OCC
+ real(dp),allocatable,dimension(:)::DYSON_occ
  real(dp),allocatable,dimension(:,:)::DYSON_COEF
- complex(dp),allocatable,dimension(:)::DYSON_OCC_cmplx
+ complex(dp),allocatable,dimension(:)::DYSON_occ_cmplx
  complex(dp),allocatable,dimension(:,:)::DYSON_COEF_cmplx
 !************************************************************************
 
- allocate(DYSON_OCC(RDMd%NBF_occ))
+ allocate(DYSON_occ(RDMd%NBF_occ))
  if(present(EigvecC).and.present(NO_COEF_cmplx)) cpx_mos=.true.
  ! Compute DYSON_COEFs
  if(cpx_mos) then
-  allocate(DYSON_OCC_cmplx(RDMd%NBF_occ))
+  allocate(DYSON_occ_cmplx(RDMd%NBF_occ))
   allocate(DYSON_COEF_cmplx(RDMd%NBF_tot,RDMd%NBF_tot))
-  DYSON_COEF_cmplx=complex_zero; DYSON_OCC_cmplx=complex_zero;
+  DYSON_COEF_cmplx=complex_zero; DYSON_occ_cmplx=complex_zero;
   ! Unnormalized DYSON_COEF
   do iorb=1,RDMd%NBF_tot
    do iorb1=1,RDMd%NBF_occ
@@ -565,26 +565,26 @@ subroutine dyson_orbs(RDMd,INTEGd,Eigvec,NO_COEF,EigvecC,NO_COEF_cmplx)
   enddo
   ! Occ numbers of DYSON_COEF
   do iorb=1,RDMd%NBF_occ
-   DYSON_OCC_cmplx(iorb)=complex_zero
+   DYSON_occ_cmplx(iorb)=complex_zero
    do iorb1=1,RDMd%NBF_tot
-    DYSON_OCC_cmplx(iorb)=DYSON_OCC_cmplx(iorb)+conjg(DYSON_COEF_cmplx(iorb1,iorb))&
+    DYSON_occ_cmplx(iorb)=DYSON_occ_cmplx(iorb)+conjg(DYSON_COEF_cmplx(iorb1,iorb))&
    &     *sum(INTEGd%Overlap(iorb1,:)*DYSON_COEF_cmplx(:,iorb))
    enddo
   enddo
   ! Normalized DYSON_COEF
   do iorb=1,RDMd%NBF_occ
    do iorb1=1,RDMd%NBF_tot
-    DYSON_COEF_cmplx(iorb1,iorb)=DYSON_COEF_cmplx(iorb1,iorb)/cdsqrt(DYSON_OCC_cmplx(iorb))
+    DYSON_COEF_cmplx(iorb1,iorb)=DYSON_COEF_cmplx(iorb1,iorb)/cdsqrt(DYSON_occ_cmplx(iorb))
    enddo
   enddo
   ! Print DYSON_COEF
   coef_file='DYSON_COEF'
   call RDMd%print_orbs(coef_file,COEF_cmplx=DYSON_COEF_cmplx)
-  DYSON_OCC(:)=real(DYSON_OCC_cmplx(:))
-  deallocate(DYSON_COEF_cmplx,DYSON_OCC_cmplx)
+  DYSON_occ(:)=real(DYSON_occ_cmplx(:))
+  deallocate(DYSON_COEF_cmplx,DYSON_occ_cmplx)
  else
   allocate(DYSON_COEF(RDMd%NBF_tot,RDMd%NBF_tot))
-  DYSON_COEF=zero; DYSON_OCC=zero;
+  DYSON_COEF=zero; DYSON_occ=zero;
   ! Unnormalized DYSON_COEF
   do iorb=1,RDMd%NBF_tot
    do iorb1=1,RDMd%NBF_occ
@@ -596,15 +596,15 @@ subroutine dyson_orbs(RDMd,INTEGd,Eigvec,NO_COEF,EigvecC,NO_COEF_cmplx)
   enddo 
   ! Occ numbers of DYSON_COEF
   do iorb=1,RDMd%NBF_occ
-   DYSON_OCC(iorb)=zero
+   DYSON_occ(iorb)=zero
    do iorb1=1,RDMd%NBF_tot
-    DYSON_OCC(iorb)=DYSON_OCC(iorb)+DYSON_COEF(iorb1,iorb)*sum(INTEGd%Overlap(iorb1,:)*DYSON_COEF(:,iorb))
+    DYSON_occ(iorb)=DYSON_occ(iorb)+DYSON_COEF(iorb1,iorb)*sum(INTEGd%Overlap(iorb1,:)*DYSON_COEF(:,iorb))
    enddo
   enddo
   ! Normalized DYSON_COEF
   do iorb=1,RDMd%NBF_occ
    do iorb1=1,RDMd%NBF_tot
-    DYSON_COEF(iorb1,iorb)=DYSON_COEF(iorb1,iorb)/dsqrt(DYSON_OCC(iorb))
+    DYSON_COEF(iorb1,iorb)=DYSON_COEF(iorb1,iorb)/dsqrt(DYSON_occ(iorb))
    enddo
   enddo
   ! Print DYSON_COEF
@@ -613,19 +613,19 @@ subroutine dyson_orbs(RDMd,INTEGd,Eigvec,NO_COEF,EigvecC,NO_COEF_cmplx)
   deallocate(DYSON_COEF)
  endif
  ! Print DYSON occ. numbers
- DYSON_OCC(:)=two*DYSON_OCC(:)
- write(msg,'(a,f10.5,a)') 'Dyson occ ',sum(DYSON_OCC(:)),'. Dyson occ. numbers '
+ DYSON_occ(:)=two*DYSON_occ(:)
+ write(msg,'(a,f10.5,a)') 'Dyson occ ',sum(DYSON_occ(:)),'. Dyson occ. numbers '
  call write_output(msg)
  do iorb=1,(RDMd%NBF_occ/10)*10,10
-  write(msg,'(f12.6,9f11.6)') DYSON_OCC(iorb:iorb+9)
+  write(msg,'(f12.6,9f11.6)') DYSON_occ(iorb:iorb+9)
   call write_output(msg)
  enddo
  iorb=(RDMd%NBF_occ/10)*10+1
- write(msg,'(f12.6,*(f11.6))') DYSON_OCC(iorb:)
+ write(msg,'(f12.6,*(f11.6))') DYSON_occ(iorb:)
  call write_output(msg)
 
  ! Deallocate array
- deallocate(DYSON_OCC)
+ deallocate(DYSON_occ)
 
 end subroutine dyson_orbs
 !!***

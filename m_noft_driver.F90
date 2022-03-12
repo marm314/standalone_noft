@@ -58,7 +58,7 @@ contains
 !! Nbeta_elect_in=Number of beta electrons (N/2 for spin compensated systems)
 !! Nalpha_elect_in=Number of beta electrons (N/2 for spin compensated systems)
 !! iERItyp_in=Index organization used for ERIs ({ij|lk}, <ij|kl>, and (ik|jl))
-!! imethocc=Method used for OCC opt. L-BFGS(1) 
+!! imethocc=Method used for occ opt. L-BFGS(1) 
 !! imethorb=Method used to opt. orbs. currently only F_diag (1)
 !! itermax=Max. number of global iters
 !! iprintdmn=Print opt. 1,2-DMNs 
@@ -74,11 +74,11 @@ contains
 !! ofile_name=Name of the output file
 !! lowmemERI=Logical parameter to decided whether to store only (NBF_tot,NBF_occ,NBF_occ,NBF_occ) part of the nat. orb. ERIs
 !! restart=Logical parameter to decided whether we do restart
-!! ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,iNOTupdateOCC,iNOTupdateORB=Integer restart parameters that control the read of checkpoint files (true=1)
+!! ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,iNOTupdateocc,iNOTupdateORB=Integer restart parameters that control the read of checkpoint files (true=1)
 !! lPower=Real exponent used to define the power functional
 !! 
 !! OUTPUT
-!! Occ=Array containing the optimized occ numbers
+!! occ=Array containing the optimized occ numbers
 !!
 !! PARENTS
 !!  
@@ -88,12 +88,12 @@ contains
 
 subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
 &  Ncoupled_in,Nbeta_elect_in,Nalpha_elect_in,iERItyp_in,imethocc,imethorb,itermax,iprintdmn,iprintswdmn,&
-&  iprintints,itolLambda,ndiis,Enof,tolE_in,Vnn,AOverlap_in,Occ_inout,mo_ints,ofile_name,NO_COEF,NO_COEF_cmplx,&
-&  lowmemERI,restart,ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,iNOTupdateOCC,iNOTupdateORB,Lpower,fcidump)   ! Optional
+&  iprintints,itolLambda,ndiis,Enof,tolE_in,Vnn,AOverlap_in,occ_inout,mo_ints,ofile_name,NO_COEF,NO_COEF_cmplx,&
+&  lowmemERI,restart,ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,iNOTupdateocc,iNOTupdateORB,Lpower,fcidump)   ! Optional
 !Arguments ------------------------------------
 !scalars
  logical,optional,intent(in)::restart,lowmemERI,fcidump
- integer,optional,intent(in)::ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,iNOTupdateOCC,iNOTupdateORB
+ integer,optional,intent(in)::ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,iNOTupdateocc,iNOTupdateORB
  integer,intent(in)::INOF_in,Ista_in,imethocc,imethorb,itermax,iprintdmn,iprintints,iprintswdmn
  integer,intent(in)::NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,Ncoupled_in,itolLambda,ndiis  
  integer,intent(in)::Nbeta_elect_in,Nalpha_elect_in,iERItyp_in
@@ -117,7 +117,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  end interface
 !arrays
  character(len=100),intent(in)::ofile_name
- real(dp),dimension(NBF_tot_in),intent(inout)::Occ_inout
+ real(dp),dimension(NBF_tot_in),intent(inout)::occ_inout
  real(dp),dimension(NBF_tot_in,NBF_tot_in),intent(in)::AOverlap_in
  real(dp),optional,dimension(NBF_tot_in,NBF_tot_in),intent(inout)::NO_COEF
  complex(dp),optional,dimension(NBF_tot_in,NBF_tot_in),intent(inout)::NO_COEF_cmplx
@@ -154,13 +154,13 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
 
  ! Print user defined parameters used in this run
  if(present(restart)) then
-  if(present(ireadGAMMAS).and.present(ireadCOEF).and.present(ireadFdiag).and.present(ireadOCC).and.&
-&    present(iNOTupdateOCC).and.present(iNOTupdateORB)) then
+  if(present(ireadGAMMAS).and.present(ireadCOEF).and.present(ireadFdiag).and.present(ireadocc).and.&
+&    present(iNOTupdateocc).and.present(iNOTupdateORB)) then
    restart_param=.true.
    call echo_input(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
 &  Ncoupled_in,Nbeta_elect_in,Nalpha_elect_in,imethocc,imethorb,itermax,iprintdmn,iprintswdmn,&
 &  iprintints,itolLambda,ndiis,ifcidump,tolE_in,cpx_mos,restart=restart,ireadGAMMAS=ireadGAMMAS,&
-&  ireadOCC=ireadOCC,ireadCOEF=ireadCOEF,ireadFdiag=ireadFdiag,iNOTupdateOCC=iNOTupdateOCC,&
+&  ireadocc=ireadocc,ireadCOEF=ireadCOEF,ireadFdiag=ireadFdiag,iNOTupdateocc=iNOTupdateocc,&
 &  iNOTupdateORB=iNOTupdateORB)
   else
    write(msg,'(a)') 'Warning! Asking for restart but the restart parameters are unspecified (not restarting).' 
@@ -203,17 +203,17 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
   write(msg,'(a)') ' '
   call write_output(msg)
   if(cpx_mos) then
-   call read_restart(RDMd,ELAGd,ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,NO_COEF_cmplx=NO_COEF_cmplx)
+   call read_restart(RDMd,ELAGd,ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,NO_COEF_cmplx=NO_COEF_cmplx)
   else
-   call read_restart(RDMd,ELAGd,ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,NO_COEF=NO_COEF)
+   call read_restart(RDMd,ELAGd,ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,NO_COEF=NO_COEF)
   endif
   write(msg,'(a)') ' '
   call write_output(msg)
  endif
 
- ! Occ optimization using guess orbs. (HF, CORE, etc). First check if we have to update occs. or keep them fixed
- if(present(iNOTupdateOCC)) then
-  if(iNOTupdateOCC==1) then
+ ! occ optimization using guess orbs. (HF, CORE, etc). First check if we have to update occs. or keep them fixed
+ if(present(iNOTupdateocc)) then
+  if(iNOTupdateocc==1) then
    keep_occs=.true.
   else
    keep_occs=.false.
@@ -276,7 +276,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
    call RDMd%print_orbs_bin(COEF=NO_COEF)
   endif
 
-  ! Occ. optimization
+  ! occ. optimization
   if(cpx_mos) then
    call opt_occ(iter,imethocc,keep_occs,RDMd,Vnn,Energy,hCORE_cmplx=INTEGd%hCORE_cmplx,ERI_J_cmplx=INTEGd%ERI_J_cmplx, &
    & ERI_K_cmplx=INTEGd%ERI_K_cmplx,ERI_L_cmplx=INTEGd%ERI_L_cmplx) ! Also iter=iter+1
@@ -330,7 +330,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
   endif
  endif
 
- ! Print optimal occ. numbers and save them in Occ_inout array
+ ! Print optimal occ. numbers and save them in occ_inout array
  write(msg,'(a)') ' '
  call write_output(msg)
  RDMd%occ(:)=two*RDMd%occ(:)
@@ -345,8 +345,8 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  call write_output(msg)
  write(msg,'(a)') ' '
  call write_output(msg)
- Occ_inout=zero
- Occ_inout(1:RDMd%NBF_occ)=RDMd%occ(1:RDMd%NBF_occ)
+ occ_inout=zero
+ occ_inout(1:RDMd%NBF_occ)=RDMd%occ(1:RDMd%NBF_occ)
 
  ! Print optimized nat. orb. coef.
  coef_file='NO_COEF'
@@ -476,13 +476,13 @@ end subroutine run_noft
 
 subroutine echo_input(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
 &  Ncoupled_in,Nbeta_elect_in,Nalpha_elect_in,imethocc,imethorb,itermax,iprintdmn,iprintswdmn,&
-&  iprintints,itolLambda,ndiis,ifcidump,tolE_in,cpx_mos_in,restart,ireadGAMMAS,ireadOCC,ireadCOEF,&
-&  ireadFdiag,iNOTupdateOCC,iNOTupdateORB)
+&  iprintints,itolLambda,ndiis,ifcidump,tolE_in,cpx_mos_in,restart,ireadGAMMAS,ireadocc,ireadCOEF,&
+&  ireadFdiag,iNOTupdateocc,iNOTupdateORB)
 !Arguments ------------------------------------
 !scalars
  logical,intent(in)::cpx_mos_in
  logical,optional,intent(in)::restart
- integer,optional,intent(in)::ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,iNOTupdateOCC,iNOTupdateORB
+ integer,optional,intent(in)::ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,iNOTupdateocc,iNOTupdateORB
  integer,intent(in)::INOF_in,Ista_in,imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints
  integer,intent(in)::NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,Ncoupled_in,ifcidump,itolLambda,ndiis  
  integer,intent(in)::Nbeta_elect_in,Nalpha_elect_in
@@ -596,7 +596,7 @@ subroutine echo_input(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in
  if(present(restart)) then
   write(msg,'(a,i12)') ' Restart reading GAMMAs (true=1)   ',ireadGAMMAS
   call write_output(msg)
-  write(msg,'(a,i12)') ' Restart reading DM1 file (true=1) ',ireadOCC
+  write(msg,'(a,i12)') ' Restart reading DM1 file (true=1) ',ireadocc
   call write_output(msg)
   write(msg,'(a,i12)') ' Restart reading COEFs  (true=1)   ',ireadCOEF
   call write_output(msg)
@@ -604,7 +604,7 @@ subroutine echo_input(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in
    write(msg,'(a,i12)') ' Restart reading F_pp   (true=1)   ',ireadFdiag
    call write_output(msg)
   endif
-  write(msg,'(a,i12)') ' Restart NOT update OCCs (true=1)  ',iNOTupdateOCC
+  write(msg,'(a,i12)') ' Restart NOT update occs (true=1)  ',iNOTupdateocc
   call write_output(msg)
   write(msg,'(a,i12)') ' Restart NOT update ORBs (true=1)  ',iNOTupdateORB
   call write_output(msg)
@@ -632,10 +632,10 @@ end subroutine echo_input
 !!
 !! SOURCE
 
-subroutine read_restart(RDMd,ELAGd,ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,NO_COEF,NO_COEF_cmplx)
+subroutine read_restart(RDMd,ELAGd,ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,NO_COEF,NO_COEF_cmplx)
 !Arguments ------------------------------------
 !scalars
- integer,intent(in)::ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag
+ integer,intent(in)::ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag
  type(elag_t),intent(inout)::ELAGd
  type(rdm_t),intent(inout)::RDMd
 !arrays
@@ -739,8 +739,8 @@ subroutine read_restart(RDMd,ELAGd,ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,NO_
   deallocate(GAMMAS_in)
  endif
 
- ! Read Occs to compute GAMMAS (using DM1 or FORM_OCC files)
- if(ireadOCC==1) then
+ ! Read occs to compute GAMMAS (using DM1 or FORM_occ files)
+ if(ireadocc==1) then
   ! Reading DM1 binary file
   open(unit=iunit,form='unformatted',file='DM1',iostat=istat,status='old')
   icount=0
@@ -758,13 +758,13 @@ subroutine read_restart(RDMd,ELAGd,ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,NO_
     endif
    enddo
    if(icount==RDMd%NBF_occ) then
-    write(msg,'(a)') 'OCCs. read from (binary) DM1 file'
+    write(msg,'(a)') 'occs. read from (binary) DM1 file'
     call write_output(msg)
    endif
   endif
   close(iunit)
-  ! Reading FORM_OCC binary file
-  open(unit=iunit,form='formatted',file='FORM_OCC',iostat=istat,status='old')
+  ! Reading FORM_occ binary file
+  open(unit=iunit,form='formatted',file='FORM_occ',iostat=istat,status='old')
   allocate(tmp_occ(RDMd%NBF_occ))
   if(istat==0) then
    icount=0
@@ -781,14 +781,14 @@ subroutine read_restart(RDMd,ELAGd,ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,NO_
     endif
    enddo
    if(icount==RDMd%NBF_occ) then
-    write(msg,'(a)') 'OCCs. read from (formatted) FORM_OCC file'
+    write(msg,'(a)') 'occs. read from (formatted) FORM_occ file'
     call write_output(msg)
     RDMd%occ=tmp_occ
    endif
   endif
   deallocate(tmp_occ)
   close(iunit)
-  ! OCC -> GAMMAs
+  ! occ -> GAMMAs
   if(icount==RDMd%NBF_occ) then
    if(ireadGAMMAS==1) then
     write(msg,'(a)') 'Comment: computing GAMMAs using occ. read'

@@ -3,7 +3,7 @@
 !!  m_optorb
 !!
 !! FUNCTION
-!!  Module prepared to compute orb optimization for a fixed set of OCCs and 2-RDM
+!!  Module prepared to compute orb optimization for a fixed set of occs and 2-RDM
 !!
 !! PARENTS
 !!  m_noft_driver
