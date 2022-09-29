@@ -295,7 +295,8 @@ subroutine build_elag(ELAGd,RDMd,INTEGd,DM2_J,DM2_K,DM2_L)
      ELAGd%Lambdas_cmplx(iorb,:)=ELAGd%Lambdas_cmplx(iorb,:)+DM2_L(iorb,iorb1)*real(INTEGd%ERImolv_cmplx(iorbv:iorbv1)) ! any->iorb1,iorb->iorb1
     enddo
    endif
-  enddo 
+  enddo
+  ELAGd%Lambdas_cmplx(:,:)=two*ELAGd%Lambdas_cmplx(:,:) 
  else
   ELAGd%Lambdas=zero
   do iorb=1,RDMd%NBF_occ
