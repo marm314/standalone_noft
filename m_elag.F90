@@ -395,6 +395,9 @@ subroutine diag_lambda_ekt(ELAGd,RDMd,INTEGd,NO_COEF,NO_COEF_cmplx,ekt)
  
  allocate(Eigvec(RDMd%NBF_tot,RDMd%NBF_tot),Work(1))
  Eigvec=ELAGd%Lambdas
+ if(ELAGd%cpx_lambdas) then
+  Eigvec=Eigvec+ELAGd%LambdasI
+ endif
 
  if(present(ekt)) then
   do iorb=1,RDMd%NBF_tot
