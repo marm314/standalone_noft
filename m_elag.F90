@@ -316,7 +316,6 @@ subroutine build_elag(ELAGd,RDMd,INTEGd,DM2_J,DM2_K,DM2_L)
    enddo
   endif
  else
-   ELAGd%real_grad=.false.
   do iorb=1,RDMd%NBF_occ
    ELAGd%Lambdas(iorb,:)=RDMd%occ(iorb)*INTEGd%hCORE(:,iorb)                                          ! Init: Lambda_pq = n_p hCORE_qp
    if(INTEGd%iERItyp/=-1) then
