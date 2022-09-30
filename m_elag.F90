@@ -239,6 +239,7 @@ subroutine build_elag(ELAGd,RDMd,INTEGd,DM2_J,DM2_K,DM2_L)
 
  ELAGd%Lambdas=zero
  if(ELAGd%cpx_lambdas) then
+  ELAGd%LambdasI=zero
   do iorb=1,RDMd%NBF_occ
    ELAGd%Lambdas(iorb,:)=RDMd%occ(iorb)*real(INTEGd%hCORE_cmplx(:,iorb))                                        ! Init: Lambda_pq = n_p hCORE_qp
    ELAGd%LambdasI(iorb,:)=RDMd%occ(iorb)*real(im*INTEGd%hCORE_cmplx(:,iorb))                                        ! Init: Lambda_pq = n_p hCORE_qp
