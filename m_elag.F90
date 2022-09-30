@@ -41,7 +41,6 @@ module m_elag
  type,public :: elag_t
 
   logical::cpx_lambdas=.false.  ! True for complex Lambdas (i.e. complex orbitals)
-  logical::real_grad=.false.    ! True for to do odd iterations with real gradient
   logical::diagLpL=.true.       ! Do the diag. using (lambda+lambda)/2?
   logical::diagLpL_done=.false. ! Did we use use (lambda+lambda)/2?
   integer::imethod=1            ! Method used for optimization (1-> Diag F matrix)
@@ -58,6 +57,7 @@ module m_elag
   real(dp),allocatable,dimension(:)::F_diag         ! F_pp (Diag. part of the F matrix)
   real(dp),allocatable,dimension(:)::Coef_DIIS      ! DIIS coefs. used to build linear comb. of F matrices
   real(dp),allocatable,dimension(:,:)::Lambdas      ! Lambda_pq (Lagrange multipliers matrix)
+  real(dp),allocatable,dimension(:,:)::LambdasI     ! Lambda_pq (Lagrange multipliers matrix imag)
   real(dp),allocatable,dimension(:,:)::DIIS_mat     ! DIIS matrix used to solve the system of eqs. DIIS_MAT*Coef_DIIS = (0 0 ... 0 1) 
   real(dp),allocatable,dimension(:,:,:)::F_DIIS     ! F matrices used by DIIS
 
@@ -148,6 +148,9 @@ subroutine elag_init(ELAGd,NBF_tot,diagLpL_in,itolLambda_in,ndiis_in,imethod_in,
  ! Allocate arrays
  allocate(ELAGd%F_diag(NBF_tot))
  allocate(ELAGd%Lambdas(NBF_tot,NBF_tot)) 
+ if(cpx_mos) then
+  allocate(ELAGd%LambdasI(NBF_tot,NBF_tot)) 
+ endif
  if(ELAGd%ndiis>0.and.ELAGd%imethod==1) then
   allocate(ELAGd%Coef_DIIS(ELAGd%ndiis_array))
   allocate(ELAGd%F_DIIS(ELAGd%ndiis_array,NBF_tot,NBF_tot))
@@ -186,6 +189,10 @@ subroutine elag_free(ELAGd)
 
  deallocate(ELAGd%F_diag) 
  deallocate(ELAGd%Lambdas)
+ 
+ if(ELAGd%cpx_lambdas) then
+  deallocate(ELAGd%LambdasI)
+ endif
  if(ELAGd%ndiis>0.and.ELAGd%imethod==1) then
   deallocate(ELAGd%Coef_DIIS)
   deallocate(ELAGd%F_DIIS)
@@ -232,89 +239,61 @@ subroutine build_elag(ELAGd,RDMd,INTEGd,DM2_J,DM2_K,DM2_L)
 
  ELAGd%Lambdas=zero
  if(ELAGd%cpx_lambdas) then
-  if(ELAGd%real_grad) then
-   do iorb=1,RDMd%NBF_occ
-    ELAGd%Lambdas(iorb,:)=RDMd%occ(iorb)*real(INTEGd%hCORE_cmplx(:,iorb))                                        ! Init: Lambda_pq = n_p hCORE_qp
-    if(INTEGd%iERItyp/=-1) then
-     ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+RDMd%DM2_iiii(iorb)*real(INTEGd%ERImol_cmplx(:,iorb,iorb,iorb))   ! any->iorb,iorb->iorb
-     do iorb1=1,RDMd%NBF_occ
-      if(iorb/=iorb1) then
-       if(INTEGd%iERItyp==0) then ! DoNOF notation {ij|lk}
-        ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_J(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb1,iorb1,iorb)) ! any->iorb,iorb1->iorb1
-        ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_K(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb1,iorb,iorb1)) ! any->iorb1,iorb1->iorb
-        ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_L(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb,iorb1,iorb1)) ! any->iorb1,iorb->iorb1
-       elseif(INTEGd%iERItyp==1) then ! <ij|kl>
-        ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_J(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb1,iorb,iorb1)) ! any->iorb,iorb1->iorb1
-        ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_K(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb1,iorb1,iorb)) ! any->iorb1,iorb1->iorb
-        ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_L(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb,iorb1,iorb1)) ! any->iorb1,iorb->iorb1
-       elseif(INTEGd%iERItyp==2) then ! (ik|jl)
-        ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_J(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb,iorb1,iorb1)) ! any->iorb,iorb1->iorb1
-        ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_K(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb1,iorb1,iorb)) ! any->iorb1,iorb1->iorb
-        ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_L(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb1,iorb,iorb1)) ! any->iorb1,iorb->iorb1
-       else
-        ! Nth
-       endif
+  do iorb=1,RDMd%NBF_occ
+   ELAGd%Lambdas(iorb,:)=RDMd%occ(iorb)*real(INTEGd%hCORE_cmplx(:,iorb))                                        ! Init: Lambda_pq = n_p hCORE_qp
+   ELAGd%LambdasI(iorb,:)=RDMd%occ(iorb)*real(im*INTEGd%hCORE_cmplx(:,iorb))                                        ! Init: Lambda_pq = n_p hCORE_qp
+   if(INTEGd%iERItyp/=-1) then
+    ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+RDMd%DM2_iiii(iorb)*real(INTEGd%ERImol_cmplx(:,iorb,iorb,iorb))   ! any->iorb,iorb->iorb
+    ELAGd%LambdasI(iorb,:)=ELAGd%Lambdas(iorb,:)+RDMd%DM2_iiii(iorb)*real(im*INTEGd%ERImol_cmplx(:,iorb,iorb,iorb))   ! any->iorb,iorb->iorb
+    do iorb1=1,RDMd%NBF_occ
+     if(iorb/=iorb1) then
+      if(INTEGd%iERItyp==0) then ! DoNOF notation {ij|lk}
+       ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_J(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb1,iorb1,iorb)) ! any->iorb,iorb1->iorb1
+       ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_K(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb1,iorb,iorb1)) ! any->iorb1,iorb1->iorb
+       ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_L(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb,iorb1,iorb1)) ! any->iorb1,iorb->iorb1
+       ELAGd%LambdasI(iorb,:)=ELAGd%LambdasI(iorb,:)+DM2_J(iorb,iorb1)*real(im*INTEGd%ERImol_cmplx(:,iorb1,iorb1,iorb)) ! any->iorb,iorb1->iorb1
+       ELAGd%LambdasI(iorb,:)=ELAGd%LambdasI(iorb,:)+DM2_K(iorb,iorb1)*real(im*INTEGd%ERImol_cmplx(:,iorb1,iorb,iorb1)) ! any->iorb1,iorb1->iorb
+       ELAGd%LambdasI(iorb,:)=ELAGd%LambdasI(iorb,:)+DM2_L(iorb,iorb1)*real(im*INTEGd%ERImol_cmplx(:,iorb,iorb1,iorb1)) ! any->iorb1,iorb->iorb1
+      elseif(INTEGd%iERItyp==1) then ! <ij|kl>
+       ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_J(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb1,iorb,iorb1)) ! any->iorb,iorb1->iorb1
+       ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_K(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb1,iorb1,iorb)) ! any->iorb1,iorb1->iorb
+       ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_L(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb,iorb1,iorb1)) ! any->iorb1,iorb->iorb1
+       ELAGd%LambdasI(iorb,:)=ELAGd%LambdasI(iorb,:)+DM2_J(iorb,iorb1)*real(im*INTEGd%ERImol_cmplx(:,iorb1,iorb,iorb1)) ! any->iorb,iorb1->iorb1
+       ELAGd%LambdasI(iorb,:)=ELAGd%LambdasI(iorb,:)+DM2_K(iorb,iorb1)*real(im*INTEGd%ERImol_cmplx(:,iorb1,iorb1,iorb)) ! any->iorb1,iorb1->iorb
+       ELAGd%LambdasI(iorb,:)=ELAGd%LambdasI(iorb,:)+DM2_L(iorb,iorb1)*real(im*INTEGd%ERImol_cmplx(:,iorb,iorb1,iorb1)) ! any->iorb1,iorb->iorb1
+      elseif(INTEGd%iERItyp==2) then ! (ik|jl)
+       ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_J(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb,iorb1,iorb1)) ! any->iorb,iorb1->iorb1
+       ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_K(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb1,iorb1,iorb)) ! any->iorb1,iorb1->iorb
+       ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_L(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb1,iorb,iorb1)) ! any->iorb1,iorb->iorb1
+       ELAGd%LambdasI(iorb,:)=ELAGd%LambdasI(iorb,:)+DM2_J(iorb,iorb1)*real(im*INTEGd%ERImol_cmplx(:,iorb,iorb1,iorb1)) ! any->iorb,iorb1->iorb1
+       ELAGd%LambdasI(iorb,:)=ELAGd%LambdasI(iorb,:)+DM2_K(iorb,iorb1)*real(im*INTEGd%ERImol_cmplx(:,iorb1,iorb1,iorb)) ! any->iorb1,iorb1->iorb
+       ELAGd%LambdasI(iorb,:)=ELAGd%LambdasI(iorb,:)+DM2_L(iorb,iorb1)*real(im*INTEGd%ERImol_cmplx(:,iorb1,iorb,iorb1)) ! any->iorb1,iorb->iorb1
+      else
+       ! Nth
       endif
-     enddo
-    else
-     iorbv= (iorb-1)*(INTEGd%NBF2+INTEGd%NBF3+INTEGd%NBF4)+1
-     iorbv1=(iorb-1)*(INTEGd%NBF2+INTEGd%NBF3+INTEGd%NBF4)+INTEGd%NBF2
-     ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+RDMd%DM2_iiii(iorb)*real(INTEGd%ERImolv_cmplx(iorbv:iorbv1))   ! any->iorb,iorb->iorb
-     do iorb1=1,RDMd%NBF_occ
-      iorbv= (iorb1-1)*(INTEGd%NBF2+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF3+1
-      iorbv1=(iorb1-1)*(INTEGd%NBF2+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF3+INTEGd%NBF2
-      ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_J(iorb,iorb1)*real(INTEGd%ERImolv_cmplx(iorbv:iorbv1)) ! any->iorb,iorb1->iorb1
-      iorbv= (iorb1-1)*(INTEGd%NBF2+INTEGd%NBF3)+(iorb-1)*INTEGd%NBF4+1
-      iorbv1=(iorb1-1)*(INTEGd%NBF2+INTEGd%NBF3)+(iorb-1)*INTEGd%NBF4+INTEGd%NBF2
-      ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_K(iorb,iorb1)*real(INTEGd%ERImolv_cmplx(iorbv:iorbv1)) ! any->iorb1,iorb1->iorb
-      iorbv= (iorb1-1)*(INTEGd%NBF3+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF2+1
-      iorbv1=(iorb1-1)*(INTEGd%NBF3+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF2+INTEGd%NBF2
-      ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_L(iorb,iorb1)*real(INTEGd%ERImolv_cmplx(iorbv:iorbv1)) ! any->iorb1,iorb->iorb1
-     enddo
-    endif
-   enddo
-  else
-   do iorb=1,RDMd%NBF_occ
-    ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)-RDMd%occ(iorb)*aimag(INTEGd%hCORE_cmplx(:,iorb))                 ! Init: Lambda_pq = n_p hCORE_qp
-    if(INTEGd%iERItyp/=-1) then
-     ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)-RDMd%DM2_iiii(iorb)*aimag(INTEGd%ERImol_cmplx(:,iorb,iorb,iorb))   ! any->iorb,iorb->iorb
-     do iorb1=1,RDMd%NBF_occ
-      if(iorb/=iorb1) then
-       if(INTEGd%iERItyp==0) then ! DoNOF notation {ij|lk}
-        ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)-DM2_J(iorb,iorb1)*aimag(INTEGd%ERImol_cmplx(:,iorb1,iorb1,iorb)) ! any->iorb,iorb1->iorb1
-        ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)-DM2_K(iorb,iorb1)*aimag(INTEGd%ERImol_cmplx(:,iorb1,iorb,iorb1)) ! any->iorb1,iorb1->iorb
-        ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)-DM2_L(iorb,iorb1)*aimag(INTEGd%ERImol_cmplx(:,iorb,iorb1,iorb1)) ! any->iorb1,iorb->iorb1
-       elseif(INTEGd%iERItyp==1) then ! <ij|kl>
-        ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)-DM2_J(iorb,iorb1)*aimag(INTEGd%ERImol_cmplx(:,iorb1,iorb,iorb1)) ! any->iorb,iorb1->iorb1
-        ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)-DM2_K(iorb,iorb1)*aimag(INTEGd%ERImol_cmplx(:,iorb1,iorb1,iorb)) ! any->iorb1,iorb1->iorb
-        ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)-DM2_L(iorb,iorb1)*aimag(INTEGd%ERImol_cmplx(:,iorb,iorb1,iorb1)) ! any->iorb1,iorb->iorb1
-       elseif(INTEGd%iERItyp==2) then ! (ik|jl)
-        ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)-DM2_J(iorb,iorb1)*aimag(INTEGd%ERImol_cmplx(:,iorb,iorb1,iorb1)) ! any->iorb,iorb1->iorb1
-        ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)-DM2_K(iorb,iorb1)*aimag(INTEGd%ERImol_cmplx(:,iorb1,iorb1,iorb)) ! any->iorb1,iorb1->iorb
-        ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)-DM2_L(iorb,iorb1)*aimag(INTEGd%ERImol_cmplx(:,iorb1,iorb,iorb1)) ! any->iorb1,iorb->iorb1
-       else
-        ! Nth
-       endif
-      endif
-     enddo
-    else
-     iorbv= (iorb-1)*(INTEGd%NBF2+INTEGd%NBF3+INTEGd%NBF4)+1
-     iorbv1=(iorb-1)*(INTEGd%NBF2+INTEGd%NBF3+INTEGd%NBF4)+INTEGd%NBF2
-     ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)-RDMd%DM2_iiii(iorb)*aimag(INTEGd%ERImolv_cmplx(iorbv:iorbv1))   ! any->iorb,iorb->iorb
-     do iorb1=1,RDMd%NBF_occ
-      iorbv= (iorb1-1)*(INTEGd%NBF2+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF3+1
-      iorbv1=(iorb1-1)*(INTEGd%NBF2+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF3+INTEGd%NBF2
-      ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)-DM2_J(iorb,iorb1)*aimag(INTEGd%ERImolv_cmplx(iorbv:iorbv1)) ! any->iorb,iorb1->iorb1
-      iorbv= (iorb1-1)*(INTEGd%NBF2+INTEGd%NBF3)+(iorb-1)*INTEGd%NBF4+1
-      iorbv1=(iorb1-1)*(INTEGd%NBF2+INTEGd%NBF3)+(iorb-1)*INTEGd%NBF4+INTEGd%NBF2
-      ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)-DM2_K(iorb,iorb1)*aimag(INTEGd%ERImolv_cmplx(iorbv:iorbv1)) ! any->iorb1,iorb1->iorb
-      iorbv= (iorb1-1)*(INTEGd%NBF3+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF2+1
-      iorbv1=(iorb1-1)*(INTEGd%NBF3+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF2+INTEGd%NBF2
-      ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)-DM2_L(iorb,iorb1)*aimag(INTEGd%ERImolv_cmplx(iorbv:iorbv1)) ! any->iorb1,iorb->iorb1
-     enddo
-    endif
-   enddo
-  endif
+     endif
+    enddo
+   else
+    iorbv= (iorb-1)*(INTEGd%NBF2+INTEGd%NBF3+INTEGd%NBF4)+1
+    iorbv1=(iorb-1)*(INTEGd%NBF2+INTEGd%NBF3+INTEGd%NBF4)+INTEGd%NBF2
+    ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+RDMd%DM2_iiii(iorb)*real(INTEGd%ERImolv_cmplx(iorbv:iorbv1))   ! any->iorb,iorb->iorb
+    ELAGd%LambdasI(iorb,:)=ELAGd%LambdasI(iorb,:)+RDMd%DM2_iiii(iorb)*real(im*INTEGd%ERImolv_cmplx(iorbv:iorbv1))   ! any->iorb,iorb->iorb
+    do iorb1=1,RDMd%NBF_occ
+     iorbv= (iorb1-1)*(INTEGd%NBF2+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF3+1
+     iorbv1=(iorb1-1)*(INTEGd%NBF2+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF3+INTEGd%NBF2
+     ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_J(iorb,iorb1)*real(INTEGd%ERImolv_cmplx(iorbv:iorbv1)) ! any->iorb,iorb1->iorb1
+     ELAGd%LambdasI(iorb,:)=ELAGd%LambdasI(iorb,:)+DM2_J(iorb,iorb1)*real(im*INTEGd%ERImolv_cmplx(iorbv:iorbv1)) ! any->iorb,iorb1->iorb1
+     iorbv= (iorb1-1)*(INTEGd%NBF2+INTEGd%NBF3)+(iorb-1)*INTEGd%NBF4+1
+     iorbv1=(iorb1-1)*(INTEGd%NBF2+INTEGd%NBF3)+(iorb-1)*INTEGd%NBF4+INTEGd%NBF2
+     ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_K(iorb,iorb1)*real(INTEGd%ERImolv_cmplx(iorbv:iorbv1)) ! any->iorb1,iorb1->iorb
+     ELAGd%LambdasI(iorb,:)=ELAGd%LambdasI(iorb,:)+DM2_K(iorb,iorb1)*real(im*INTEGd%ERImolv_cmplx(iorbv:iorbv1)) ! any->iorb1,iorb1->iorb
+     iorbv= (iorb1-1)*(INTEGd%NBF3+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF2+1
+     iorbv1=(iorb1-1)*(INTEGd%NBF3+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF2+INTEGd%NBF2
+     ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_L(iorb,iorb1)*real(INTEGd%ERImolv_cmplx(iorbv:iorbv1)) ! any->iorb1,iorb->iorb1
+     ELAGd%LambdasI(iorb,:)=ELAGd%LambdasI(iorb,:)+DM2_L(iorb,iorb1)*real(im*INTEGd%ERImolv_cmplx(iorbv:iorbv1)) ! any->iorb1,iorb->iorb1
+    enddo
+   endif
+  enddo
  else
   do iorb=1,RDMd%NBF_occ
    ELAGd%Lambdas(iorb,:)=RDMd%occ(iorb)*INTEGd%hCORE(:,iorb)                                          ! Init: Lambda_pq = n_p hCORE_qp

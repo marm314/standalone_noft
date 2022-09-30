@@ -86,10 +86,9 @@ subroutine diagF_to_coef(iter,icall,maxdiff,diddiis,ELAGd,RDMd,NO_COEF,NO_COEF_c
  else
   do iorb=1,RDMd%NBF_tot 
    do iorb1=1,iorb-1
-    if(ELAGd%real_grad) then
-     Eigvec(iorb,iorb1)=ELAGd%Lambdas(iorb1,iorb)-ELAGd%Lambdas(iorb,iorb1)
-    else
-     Eigvec(iorb,iorb1)=ELAGd%Lambdas(iorb1,iorb)+ELAGd%Lambdas(iorb,iorb1)
+    Eigvec(iorb,iorb1)=ELAGd%Lambdas(iorb1,iorb)-ELAGd%Lambdas(iorb,iorb1)
+    if(ELAGd%cpx_lambdas) then
+     Eigvec(iorb,iorb1)=Eigvec(iorb,iorb1)+(ELAGd%LambdasI(iorb1,iorb)+ELAGd%LambdasI(iorb,iorb1))
     endif
     call scale_F(ELAGd%MaxScaling+9,Eigvec(iorb,iorb1)) ! Scale the Fpq element to avoid divergence
     Eigvec(iorb1,iorb)=Eigvec(iorb,iorb1)               ! Fpq=Fqp
