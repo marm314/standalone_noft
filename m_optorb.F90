@@ -204,7 +204,7 @@ subroutine opt_orb(iter,imethod,ELAGd,RDMd,INTEGd,Vnn,Energy,mo_ints,NO_COEF,NO_
 !-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --       
  enddo
  
- if(ELAGd%real_grad.and.iter/=0) then
+ if(ELAGd%real_grad.and.iter/=0.and.Ediff<ten**-FOUR) then
   ELAGd%real_grad=.false.
  else
   ELAGd%real_grad=.true.
