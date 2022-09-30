@@ -204,6 +204,12 @@ subroutine opt_orb(iter,imethod,ELAGd,RDMd,INTEGd,Vnn,Energy,mo_ints,NO_COEF,NO_
 !-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --       
  enddo
  
+ if(ELAGd%real_grad.and.iter/=0) then
+  ELAGd%real_grad=.false.
+ else
+  ELAGd%real_grad=.true.
+ endif
+ 
  ! Calc. the final Energy using fixed RDMs and the new NO_COEF (before going back to occ. optimization)
  if(INTEGd%complex_ints) then
   call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &

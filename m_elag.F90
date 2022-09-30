@@ -233,7 +233,6 @@ subroutine build_elag(ELAGd,RDMd,INTEGd,DM2_J,DM2_K,DM2_L)
  ELAGd%Lambdas=zero
  if(ELAGd%cpx_lambdas) then
   if(ELAGd%real_grad) then
-   ELAGd%real_grad=.false.
    do iorb=1,RDMd%NBF_occ
     ELAGd%Lambdas(iorb,:)=RDMd%occ(iorb)*real(INTEGd%hCORE_cmplx(:,iorb))                                        ! Init: Lambda_pq = n_p hCORE_qp
     if(INTEGd%iERItyp/=-1) then
@@ -275,7 +274,6 @@ subroutine build_elag(ELAGd,RDMd,INTEGd,DM2_J,DM2_K,DM2_L)
     endif
    enddo
   else
-   ELAGd%real_grad=.true.
    do iorb=1,RDMd%NBF_occ
     ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)-RDMd%occ(iorb)*aimag(INTEGd%hCORE_cmplx(:,iorb))                 ! Init: Lambda_pq = n_p hCORE_qp
     if(INTEGd%iERItyp/=-1) then
