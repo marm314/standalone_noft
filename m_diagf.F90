@@ -96,7 +96,7 @@ subroutine diagF_to_coef(iter,icall,maxdiff,diddiis,ELAGd,RDMd,NO_COEF,NO_COEF_c
 
  ! Decide whether to do DIIS before diagonalizing
  if(maxdiff<thresholddiis.and.ELAGd%ndiis>0) then
-  call diis_F(diddiis,RDMd,ELAGd,Eigvec)
+ ! call diis_F(diddiis,RDMd,ELAGd,Eigvec)
  endif 
 
  ! Prepare F_pq diagonalization (stored as Eigvec) and diagonalize it to produce the rot. matrix
@@ -118,7 +118,7 @@ subroutine diagF_to_coef(iter,icall,maxdiff,diddiis,ELAGd,RDMd,NO_COEF,NO_COEF_c
   deallocate(New_NO_COEF)
  else
   allocate(New_NO_COEF_cmplx(RDMd%NBF_tot,RDMd%NBF_tot))
-  New_NO_COEF_cmplx=matmul(NO_COEF_cmplx,im*Eigvec)
+  New_NO_COEF_cmplx=matmul(NO_COEF_cmplx,ELAGd%RorI*Eigvec)
   NO_COEF_cmplx=New_NO_COEF_cmplx
   deallocate(New_NO_COEF_cmplx)
  endif
