@@ -207,7 +207,7 @@ subroutine opt_orb(iter,imethod,ELAGd,RDMd,INTEGd,Vnn,Energy,mo_ints,NO_COEF,NO_
  if(ELAGd%real_grad.and.iter/=0) then
  ! ELAGd%real_grad=.false.
  else
-  ELAGd%real_grad=.true.
+ ! ELAGd%real_grad=.true.
  endif
  
  ! Calc. the final Energy using fixed RDMs and the new NO_COEF (before going back to occ. optimization)

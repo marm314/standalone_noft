@@ -41,7 +41,7 @@ module m_elag
  type,public :: elag_t
 
   logical::cpx_lambdas=.false.  ! True for complex Lambdas (i.e. complex orbitals)
-  logical::real_grad=.true.     ! True for to do odd iterations with real gradient
+  logical::real_grad=.false.     ! True for to do odd iterations with real gradient
   logical::diagLpL=.true.       ! Do the diag. using (lambda+lambda)/2?
   logical::diagLpL_done=.false. ! Did we use use (lambda+lambda)/2?
   integer::imethod=1            ! Method used for optimization (1-> Diag F matrix)
