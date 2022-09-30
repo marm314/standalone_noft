@@ -54,7 +54,6 @@ module m_elag
   integer::ndiis_array          ! Size of the arrays used in DIIS (ndiis+2)
   real(dp)::sumdiff_old         ! Old value of sum_pq |F_pq|  for p/=q 
   real(dp)::tolE                ! Tolerance that will be imposed in Energy convergence
-  complex(dp)::RorI=complex_one ! Decide whether we use a real or imag. rotation
 ! arrays 
   real(dp),allocatable,dimension(:)::F_diag         ! F_pp (Diag. part of the F matrix)
   real(dp),allocatable,dimension(:)::Coef_DIIS      ! DIIS coefs. used to build linear comb. of F matrices

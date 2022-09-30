@@ -261,10 +261,9 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
   if(.not.keep_orbs) then
    call ELAGd%clean_diis()
    if(cpx_mos) then
-    ELAGd%RorI=complex_one ! Real gradient
     ELAGd%real_grad=.true.
     call opt_orb(iter,imethorb,ELAGd,RDMd,INTEGd,Vnn,Energy,mo_ints,NO_COEF_cmplx=NO_COEF_cmplx)
-    ELAGd%RorI=im          ! Complex gradient
+    call ELAGd%clean_diis()
     ELAGd%real_grad=.false.
     call opt_orb(iter,imethorb,ELAGd,RDMd,INTEGd,Vnn,Energy,mo_ints,NO_COEF_cmplx=NO_COEF_cmplx)
    else   
