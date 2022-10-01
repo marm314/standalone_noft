@@ -245,7 +245,7 @@ subroutine build_elag(ELAGd,RDMd,INTEGd,DM2_J,DM2_K,DM2_L)
    ELAGd%LambdasI(iorb,:)=RDMd%occ(iorb)*real(im*INTEGd%hCORE_cmplx(:,iorb))                                        ! Init: Lambda_pq = n_p hCORE_qp
    if(INTEGd%iERItyp/=-1) then
     ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+RDMd%DM2_iiii(iorb)*real(INTEGd%ERImol_cmplx(:,iorb,iorb,iorb))   ! any->iorb,iorb->iorb
-    ELAGd%LambdasI(iorb,:)=ELAGd%Lambdas(iorb,:)+RDMd%DM2_iiii(iorb)*real(im*INTEGd%ERImol_cmplx(:,iorb,iorb,iorb))   ! any->iorb,iorb->iorb
+    ELAGd%LambdasI(iorb,:)=ELAGd%LambdasI(iorb,:)+RDMd%DM2_iiii(iorb)*real(im*INTEGd%ERImol_cmplx(:,iorb,iorb,iorb))   ! any->iorb,iorb->iorb
     do iorb1=1,RDMd%NBF_occ
      if(iorb/=iorb1) then
       if(INTEGd%iERItyp==0) then ! DoNOF notation {ij|lk}
