@@ -159,7 +159,7 @@ subroutine diagF_to_coef(iter,icall,maxdiff,diddiis,ELAGd,RDMd,NO_COEF,NO_COEF_c
 
   ! Update the NO_COEF_cmplx
   allocate(New_NO_COEF_cmplx(RDMd%NBF_tot,RDMd%NBF_tot))
-  New_NO_COEF_cmplx=matmul(NO_COEF_cmplx,Eigvec)
+  New_NO_COEF_cmplx=matmul(NO_COEF_cmplx,Eigvec_cmplx)
   NO_COEF_cmplx=New_NO_COEF_cmplx
   deallocate(New_NO_COEF_cmplx,Eigvec_cmplx)
 
