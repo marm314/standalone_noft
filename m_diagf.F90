@@ -244,13 +244,11 @@ subroutine scale_F_cmplx(MaxScaling,Fpq)
  integer::iscale
 !arrays
  real(dp)::Abs_Fpq
- complex(dp)::tol1_cmplx
 !************************************************************************
- tol1_cmplx=tol1+tol1*im
  do iscale=1,MaxScaling
   Abs_Fpq=cdabs(Fpq)
   if(Abs_Fpq>ten**(9-iscale).and.Abs_Fpq<ten**(10-iscale)) then
-   Fpq=tol1_cmplx*Fpq
+   Fpq=tol1*Fpq
   endif
  enddo
 end subroutine scale_F_cmplx
