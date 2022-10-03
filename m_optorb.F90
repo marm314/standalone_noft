@@ -267,7 +267,8 @@ subroutine lambda_conv(ELAGd,RDMd,converg_lamb,sumdiff,maxdiff,iorbmax1,iorbmax2
   do iorb1=1,RDMd%NBF_tot
    diff=dabs(ELAGd%Lambdas(iorb1,iorb)-ELAGd%Lambdas(iorb,iorb1))
    if(ELAGd%cpx_lambdas .and. iorb/=iorb1) then
-    diff=diff+dabs(ELAGd%Lambdas_im(iorb1,iorb)+ELAGd%Lambdas_im(iorb,iorb1))
+    diff=diff*diff+(ELAGd%Lambdas_im(iorb1,iorb)+ELAGd%Lambdas_im(iorb,iorb1))**two
+    diff=dsqrt(diff)
    endif
    sumdiff=sumdiff+diff
    if((diff>=tol_dif_Lambda) .and. converg_lamb) then
