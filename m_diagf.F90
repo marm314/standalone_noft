@@ -140,7 +140,8 @@ subroutine diagF_to_coef(iter,icall,maxdiff,diddiis,ELAGd,RDMd,NO_COEF,NO_COEF_c
      call scale_F_cmplx(ELAGd%MaxScaling+9,Eigvec_cmplx(iorb,iorb1))  ! Scale the Fpq element to avoid divergence
      Eigvec_cmplx(iorb1,iorb)=conjg(Eigvec_cmplx(iorb,iorb1))         ! Fpq=Fqp*
     enddo
-    Phases(iorb)=Eigvec_cmplx(iorb,iorb)
+    Phases(iorb)=im*(ELAGd%Lambdas_im(iorb,iorb)+ELAGd%Lambdas_im(iorb,iorb))
+    if(cdabs(Phases(iorb))<tol8) Phases(iorb)=complex_zero
     call scale_F_cmplx(ELAGd%MaxScaling+9,Phases(iorb))
     Eigvec_cmplx(iorb,iorb)=complex_zero
     Eigvec_cmplx(iorb,iorb)=ELAGd%F_diag(iorb)
@@ -161,7 +162,7 @@ subroutine diagF_to_coef(iter,icall,maxdiff,diddiis,ELAGd,RDMd,NO_COEF,NO_COEF_c
 
   ! Update the NO_COEF_cmplx
   do iorb=1,RDMd%NBF_tot 
-   NO_COEF_cmplx(:,iorb)=Phases(iorb)*NO_COEF_cmplx(:,iorb)
+   NO_COEF_cmplx(:,iorb)=exp(Phases(iorb))*NO_COEF_cmplx(:,iorb)
   enddo
   allocate(New_NO_COEF_cmplx(RDMd%NBF_tot,RDMd%NBF_tot))
   New_NO_COEF_cmplx=matmul(NO_COEF_cmplx,Eigvec_cmplx)
