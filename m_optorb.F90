@@ -277,10 +277,18 @@ subroutine lambda_conv(ELAGd,RDMd,converg_lamb,sumdiff,maxdiff,iorbmax1,iorbmax2
    if((diff>=tol_dif_Lambda) .and. converg_lamb) then
     converg_lamb=.false.
    endif
-   if(diff>maxdiff) then
-    maxdiff=diff
-    iorbmax1=iorb
-    iorbmax2=iorb1
+   if(ELAGd%cpx_lambdas) then
+    if(diff>maxdiff .and.iorb/=iorb1) then
+     maxdiff=diff
+     iorbmax1=iorb
+     iorbmax2=iorb1
+    endif
+   else
+    if(diff>maxdiff) then
+     maxdiff=diff
+     iorbmax1=iorb
+     iorbmax2=iorb1
+    endif
    endif
   enddo
  enddo
