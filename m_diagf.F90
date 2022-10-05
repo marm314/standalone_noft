@@ -123,6 +123,7 @@ subroutine diagF_to_coef(iter,icall,maxdiff,diddiis,ELAGd,RDMd,NO_COEF,NO_COEF_c
  else
 
   allocate(Eigvec_cmplx(RDMd%NBF_tot,RDMd%NBF_tot),Work_cmplx(1),RWork(3*RDMd%NBF_tot-2),Phases(RDMd%NBF_tot))
+  Phases=complex_zero
   if((icall==0.and.iter==0).and.(ELAGd%diagLpL.and.(.not.ELAGd%diagLpL_done))) then
    ELAGd%diagLpL_done=.true. 
    do iorb=1,RDMd%NBF_tot 
