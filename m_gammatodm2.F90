@@ -929,13 +929,13 @@ subroutine dm2_gnof(RDMd,Docc_gamma,sqrt_occ,Dsqrt_occ_gamma,DM2_iiii,DM2_J,DM2_
    DM2_L(iorb,iorb1) = -FIs(iorb)*FIs(iorb1)
    DDM2_gamma_L(iorb,iorb1,:) = -DFIs(iorb,:)*FIs(iorb1)
   enddo
-
-  ! Including this and removing the dynamic contrib., it is PNOF7
-  do iorb1=RDMd%Nfrozen+1,RDMd%Nbeta_elect
-   DM2_L(iorb,iorb1) = -FIs(iorb)*FIs(iorb1)
-   DDM2_gamma_L(iorb,iorb1,:) = -DFIs(iorb,:)*FIs(iorb1)
-  enddo
-
+!
+!  ! Including this and removing the dynamic contrib., it is PNOF7
+!  do iorb1=RDMd%Nfrozen+1,RDMd%Nbeta_elect
+!   DM2_L(iorb,iorb1) = -FIs(iorb)*FIs(iorb1)
+!   DDM2_gamma_L(iorb,iorb1,:) = -DFIs(iorb,:)*FIs(iorb1)
+!  enddo
+!
  enddo
  do iorb=RDMd%Nalpha_elect+1,RDMd%NBF_occ
   do iorb1=RDMd%Nfrozen+1,RDMd%Nbeta_elect
@@ -950,25 +950,25 @@ subroutine dm2_gnof(RDMd,Docc_gamma,sqrt_occ,Dsqrt_occ_gamma,DM2_iiii,DM2_J,DM2_
 !- - - - - - - - - - - - - - - - - - - - - - - - - - -              
 !   Dynamic
 !- - - - - - - - - - - - - - - - - - - - - - - - - - -              
-! do iorb=RDMd%Nfrozen+1,RDMd%Nbeta_elect
-!  do iorb1=RDMd%Nalpha_elect+1,RDMd%NBF_occ
-!   DM2_L(iorb,iorb1) = DM2_L(iorb,iorb1)-sqrt_occ_dyn(iorb)*sqrt_occ_dyn(iorb1)+occ_dyn(iorb)*occ_dyn(iorb1)
-!   DDM2_gamma_L(iorb,iorb1,:) = DDM2_gamma_L(iorb,iorb1,:)-Dsqrt_occ_dyn(iorb,:)*sqrt_occ_dyn(iorb1) &
-!  &  +Docc_dyn(iorb,:)*occ_dyn(iorb1)      
-!  enddo
-! enddo
-! do iorb=RDMd%Nalpha_elect+1,RDMd%NBF_occ
-!  do iorb1=RDMd%Nfrozen+1,RDMd%Nbeta_elect
-!   DM2_L(iorb,iorb1) = DM2_L(iorb,iorb1)-sqrt_occ_dyn(iorb)*sqrt_occ_dyn(iorb1)+occ_dyn(iorb)*occ_dyn(iorb1)
-!   DDM2_gamma_L(iorb,iorb1,:) = DDM2_gamma_L(iorb,iorb1,:)-Dsqrt_occ_dyn(iorb,:)*sqrt_occ_dyn(iorb1) &
-!  &  +Docc_dyn(iorb,:)*occ_dyn(iorb1)      
-!  enddo
-!  do iorb1=RDMd%Nfrozen+1,RDMd%Nbeta_elect
-!   DM2_L(iorb,iorb1) = DM2_L(iorb,iorb1)-sqrt_occ_dyn(iorb)*sqrt_occ_dyn(iorb1)+occ_dyn(iorb)*occ_dyn(iorb1)
-!   DDM2_gamma_L(iorb,iorb1,:) = DDM2_gamma_L(iorb,iorb1,:)-Dsqrt_occ_dyn(iorb,:)*sqrt_occ_dyn(iorb1) &
-!  &  +Docc_dyn(iorb,:)*occ_dyn(iorb1)      
-!  enddo
-! enddo
+ do iorb=RDMd%Nfrozen+1,RDMd%Nbeta_elect
+  do iorb1=RDMd%Nalpha_elect+1,RDMd%NBF_occ
+   DM2_L(iorb,iorb1) = DM2_L(iorb,iorb1)-sqrt_occ_dyn(iorb)*sqrt_occ_dyn(iorb1)+occ_dyn(iorb)*occ_dyn(iorb1)
+   DDM2_gamma_L(iorb,iorb1,:) = DDM2_gamma_L(iorb,iorb1,:)-Dsqrt_occ_dyn(iorb,:)*sqrt_occ_dyn(iorb1) &
+  &  +Docc_dyn(iorb,:)*occ_dyn(iorb1)      
+  enddo
+ enddo
+ do iorb=RDMd%Nalpha_elect+1,RDMd%NBF_occ
+  do iorb1=RDMd%Nfrozen+1,RDMd%Nbeta_elect
+   DM2_L(iorb,iorb1) = DM2_L(iorb,iorb1)-sqrt_occ_dyn(iorb)*sqrt_occ_dyn(iorb1)+occ_dyn(iorb)*occ_dyn(iorb1)
+   DDM2_gamma_L(iorb,iorb1,:) = DDM2_gamma_L(iorb,iorb1,:)-Dsqrt_occ_dyn(iorb,:)*sqrt_occ_dyn(iorb1) &
+  &  +Docc_dyn(iorb,:)*occ_dyn(iorb1)      
+  enddo
+  do iorb1=RDMd%Nfrozen+1,RDMd%Nbeta_elect
+   DM2_L(iorb,iorb1) = DM2_L(iorb,iorb1)-sqrt_occ_dyn(iorb)*sqrt_occ_dyn(iorb1)+occ_dyn(iorb)*occ_dyn(iorb1)
+   DDM2_gamma_L(iorb,iorb1,:) = DDM2_gamma_L(iorb,iorb1,:)-Dsqrt_occ_dyn(iorb,:)*sqrt_occ_dyn(iorb1) &
+  &  +Docc_dyn(iorb,:)*occ_dyn(iorb1)      
+  enddo
+ enddo
  deallocate(FIs,DFIs)
  deallocate(occ_dyn,Docc_dyn,sqrt_occ_dyn,Dsqrt_occ_dyn)
 !-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
