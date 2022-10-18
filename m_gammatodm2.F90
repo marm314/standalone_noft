@@ -885,15 +885,25 @@ subroutine dm2_gnof(RDMd,Docc_gamma,sqrt_occ,Dsqrt_occ_gamma,DM2_iiii,DM2_J,DM2_
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  allocate(FIs(RDMd%NBF_occ),DFIs(RDMd%NBF_occ,RDMd%Ngammas))
  FIs = zero; DFIs = zero;
+ if(RDMd%Ista==0) then
 !- - - - - - - - - - - - - - - - - - - - - - - - - - -  
 !      FIs = (Np*Hp)^1/2
 !- - - - - - - - - - - - - - - - - - - - - - - - - - -
- do iorb=RDMd%Nfrozen+1,RDMd%NBF_occ
-  FIs(iorb) = dsqrt( RDMd%occ(iorb)*(one-RDMd%occ(iorb)) )
-  if(FIs(iorb)>tol20) then
-   DFIs(iorb,:) = (half-RDMd%occ(iorb))*Docc_gamma(iorb,:)/FIs(iorb)
-  endif
- enddo
+  do iorb=RDMd%Nfrozen+1,RDMd%NBF_occ
+   FIs(iorb) = dsqrt( RDMd%occ(iorb)*(one-RDMd%occ(iorb)) )
+   if(FIs(iorb)>tol20) then
+    DFIs(iorb,:) = (half-RDMd%occ(iorb))*Docc_gamma(iorb,:)/FIs(iorb)
+   endif
+  enddo
+ else if(RDMd%Ista==1) then
+!- - - - - - - - - - - - - - - - - - - - - - - - - - -  
+!      FIs = (4*Np*Hp)^0.5*(Np*Hp)^0.5 = 2*Np*Hp
+!- - - - - - - - - - - - - - - - - - - - - - - - - - -
+  do iorb=RDMd%Nfrozen+1,RDMd%NBF_occ
+   FIs(iorb) = two*RDMd%occ(iorb)*(one-RDMd%occ(iorb))
+   DFIs(iorb,:) = two*(one-two*RDMd%occ(iorb))*Docc_gamma(iorb,:)
+  enddo
+ endif
 !- - - - - - - - - - - - - - - - - - - - - - - - - - -              
 !-----------------------------------------------------------------------
 !                Inter-pair interactions for GNOF (Nc)
@@ -920,7 +930,7 @@ subroutine dm2_gnof(RDMd,Docc_gamma,sqrt_occ,Dsqrt_occ_gamma,DM2_iiii,DM2_J,DM2_
    DDM2_gamma_L(iorb,iorb1,:) = -DFIs(iorb,:)*FIs(iorb1)
   enddo
 
-  !This is PNOF7
+  ! Including this and removing the dynamic contrib., it is PNOF7
   do iorb1=RDMd%Nfrozen+1,RDMd%Nbeta_elect
    DM2_L(iorb,iorb1) = -FIs(iorb)*FIs(iorb1)
    DDM2_gamma_L(iorb,iorb1,:) = -DFIs(iorb,:)*FIs(iorb1)
