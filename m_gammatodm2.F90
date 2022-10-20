@@ -936,11 +936,6 @@ subroutine dm2_gnof(RDMd,Docc_gamma,sqrt_occ,Dsqrt_occ_gamma,DM2_iiii,DM2_J,DM2_
   enddo
  enddo
  deallocate(occ_dyn,Docc_dyn,sqrt_occ_dyn,Dsqrt_occ_dyn)
-do iorb=1,RDMd%NBF_occ
- do iorb1=1,RDMd%NBF_occ
-  if(iorb/=iorb1) write(*,*) iorb,iorb1,DM2_L(iorb,iorb1)
- enddo
-enddo
 !-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 !                Intra-pair interactions for GNOF(Nc)
 !-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
