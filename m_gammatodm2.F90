@@ -809,7 +809,7 @@ subroutine dm2_gnof(RDMd,Docc_gamma,sqrt_occ,Dsqrt_occ_gamma,DM2_iiii,DM2_J,DM2_
 !scalars
  integer::iorb,iorb1,iorb2,iorb3,iorb4,iorb5
 !arrays
- real(dp)::expon,dexponent,hole_dyn
+ real(dp)::exponential,dexponent,hole_dyn
  real(dp),allocatable,dimension(:)::FIs,occ_dyn,sqrt_occ_dyn
  real(dp),allocatable,dimension(:,:)::DFIs,Docc_dyn,Dsqrt_occ_dyn
 !************************************************************************
@@ -823,20 +823,20 @@ subroutine dm2_gnof(RDMd,Docc_gamma,sqrt_occ,Dsqrt_occ_gamma,DM2_iiii,DM2_J,DM2_
  do iorb=1,RDMd%Npairs
   iorb1=RDMd%Nfrozen+iorb
   hole_dyn=(one-RDMd%occ(iorb1))/RDMd%Hcut 
-  expon=dexp(-(hole_dyn**two)) 
+  exponential=dexp(-(hole_dyn**two)) 
   dexponent=-two*hole_dyn/RDMd%Hcut 
-  occ_dyn(iorb1)= RDMd%occ(iorb1)*expon
-  Docc_dyn(iorb1,:)=expon*Docc_gamma(iorb1,:)*(one-RDMd%occ(iorb1)*dexponent)
+  occ_dyn(iorb1)= RDMd%occ(iorb1)*exponential
+  Docc_dyn(iorb1,:)=exponential*Docc_gamma(iorb1,:)*(one-RDMd%occ(iorb1)*dexponent)
   if(RDMd%Ncoupled>1) then  ! Extended
    do iorb2=1,RDMd%Ncoupled  
     iorb3=RDMd%Nalpha_elect+RDMd%Ncoupled*(RDMd%Npairs-iorb)+iorb2
-    occ_dyn(iorb3)=RDMd%occ(iorb3)*expon
-    Docc_dyn(iorb3,:)=expon*(Docc_gamma(iorb3,:)-RDMd%occ(iorb3)*Docc_gamma(iorb1,:)*dexponent)
+    occ_dyn(iorb3)=RDMd%occ(iorb3)*exponential
+    Docc_dyn(iorb3,:)=exponential*(Docc_gamma(iorb3,:)-RDMd%occ(iorb3)*Docc_gamma(iorb1,:)*dexponent)
    enddo 
   else                      ! Perfect-pairing
    iorb2=RDMd%Nalpha_elect+(RDMd%Npairs-iorb)+1
-   occ_dyn(iorb2)=RDMd%occ(iorb2)*expon
-   Docc_dyn(iorb2,:)=expon*(Docc_gamma(iorb2,:)-RDMd%occ(iorb2)*Docc_gamma(iorb1,:)*dexponent)
+   occ_dyn(iorb2)=RDMd%occ(iorb2)*exponential
+   Docc_dyn(iorb2,:)=exponential*(Docc_gamma(iorb2,:)-RDMd%occ(iorb2)*Docc_gamma(iorb1,:)*dexponent)
   endif 
  enddo
  sqrt_occ_dyn(:)=dsqrt(occ_dyn(:))
@@ -874,7 +874,7 @@ subroutine dm2_gnof(RDMd,Docc_gamma,sqrt_occ,Dsqrt_occ_gamma,DM2_iiii,DM2_J,DM2_
 !                Inter-pair interactions for GNOF (Nc)
 !-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 !- - - - - - - - - - - - - - - - - - - - - - - - - - -              
-!   HF-like
+!   HF-like (keeping only this term is PNOF5)
 !- - - - - - - - - - - - - - - - - - - - - - - - - - -              
  do iorb=1,RDMd%NBF_occ
   do iorb1=1,RDMd%NBF_occ
@@ -936,6 +936,11 @@ subroutine dm2_gnof(RDMd,Docc_gamma,sqrt_occ,Dsqrt_occ_gamma,DM2_iiii,DM2_J,DM2_
   enddo
  enddo
  deallocate(occ_dyn,Docc_dyn,sqrt_occ_dyn,Dsqrt_occ_dyn)
+do iorb=1,RDMd%NBF_occ
+ do iorb1=1,RDMd%NBF_occ
+  if(iorb/=iorb1) write(*,*) iorb,iorb1,DM2_L(iorb,iorb1)
+ enddo
+enddo
 !-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 !                Intra-pair interactions for GNOF(Nc)
 !-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
