@@ -1,4 +1,4 @@
-This is a standalone version of DoNOF code for running RDMFT (NOFT) calculations.
+This is a standalone version of the DoNOF code for running RDMFT (NOFT) calculations.
 
 Developed by Dr. M. Rodriguez-Mayorga
      email: marm3.14@gmail.com 
@@ -23,8 +23,8 @@ License:
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ######################################################################################
 
-This module is written in Fortran, it uses the formats employed in ABINIT code to structure the files, define procedures and objects, etc.
-It is based on DoNOF code developed by Prof. Dr. M. Piris and Dr. I. Mitxelena
+This module is written in Fortran (using ABINIT code structure to define procedures and objects, etc).
+It is based on the DoNOF code developed by Prof. Dr. M. Piris and Dr. I. Mitxelena
 (See https://github.com/DoNOF/DoNOFsw for more details).
 
 Compilation:  
