@@ -265,17 +265,17 @@ subroutine eri_to_eriJKL(INTEGd,NBF_occ)
     elseif(INTEGd%iERItyp==1) then
      INTEGd%ERI_J_cmplx(iorb2)=INTEGd%ERImol_cmplx(iorb,iorb1,iorb,iorb1) ! J in <ij|ij>
      INTEGd%ERI_K_cmplx(iorb2)=INTEGd%ERImol_cmplx(iorb,iorb1,iorb1,iorb) ! K in <ij|ji>
-     INTEGd%ERI_L_cmplx(iorb2)=INTEGd%ERImol_cmplx(iorb,iorb1,iorb,iorb1) ! L in <ii|jj>
+     INTEGd%ERI_L_cmplx(iorb2)=INTEGd%ERImol_cmplx(iorb,iorb1,iorb1,iorb) ! L in <ii|jj>
     elseif(INTEGd%iERItyp==2) then
      INTEGd%ERI_J_cmplx(iorb2)=INTEGd%ERImol_cmplx(iorb,iorb,iorb1,iorb1) ! J in (ii|jj)
      INTEGd%ERI_K_cmplx(iorb2)=INTEGd%ERImol_cmplx(iorb,iorb1,iorb1,iorb) ! K in (ij|ji)
-     INTEGd%ERI_L_cmplx(iorb2)=INTEGd%ERImol_cmplx(iorb,iorb,iorb1,iorb1) ! L in (ij|ij)
+     INTEGd%ERI_L_cmplx(iorb2)=INTEGd%ERImol_cmplx(iorb,iorb1,iorb1,iorb) ! L in (ij|ij)
     elseif(INTEGd%iERItyp==-1) then
      iorbm1=iorb-1
      iorb1m1=iorb1-1
      INTEGd%ERI_J_cmplx(iorb2)=INTEGd%ERImolv_cmplx(iorbm1+iorb1m1*INTEGd%NBF2+iorbm1*INTEGd%NBF3+iorb1m1*INTEGd%NBF4+1)!J in <i+j*NBF2+i*NBF3+j*NBF4> 
      INTEGd%ERI_K_cmplx(iorb2)=INTEGd%ERImolv_cmplx(iorbm1+iorb1m1*INTEGd%NBF2+iorb1m1*INTEGd%NBF3+iorbm1*INTEGd%NBF4+1)!K in <i+j*NBF2+j*NBF3+i*NBF4> 
-     INTEGd%ERI_L_cmplx(iorb2)=INTEGd%ERImolv_cmplx(iorbm1+iorb1m1*INTEGd%NBF2+iorb1m1*INTEGd%NBF3+iorbm1*INTEGd%NBF4+1)!K in <i+j*NBF2+j*NBF3+i*NBF4> 
+     INTEGd%ERI_L_cmplx(iorb2)=INTEGd%ERImolv_cmplx(iorbm1+iorb1m1*INTEGd%NBF2+iorb1m1*INTEGd%NBF3+iorbm1*INTEGd%NBF4+1)!Lpq is Kpq with time-rev symm
     !INTEGd%ERI_L_cmplx(iorb2)=INTEGd%ERImolv_cmplx(iorbm1+iorbm1*INTEGd%NBF2+iorb1m1*INTEGd%NBF3+iorb1m1*INTEGd%NBF4+1)!L in <i+i*NBF2+j*NBF3+j*NBF4> 
     else 
      ! Nth
