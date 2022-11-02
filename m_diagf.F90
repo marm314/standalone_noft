@@ -67,7 +67,7 @@ subroutine diagF_to_coef(iter,icall,maxdiff,diddiis,ELAGd,RDMd,NO_COEF,NO_COEF_c
  real(dp)::thresholddiis
 !arrays
  real(dp),allocatable,dimension(:)::Work,RWork
- complex(dp),allocatable,dimension(:)::Work_cmplx!,Phases
+ complex(dp),allocatable,dimension(:)::Work_cmplx,Phases
  real(dp),allocatable,dimension(:,:)::Eigvec,New_NO_COEF ! Eigvec is initially the F matrix
  complex(dp),allocatable,dimension(:,:)::Eigvec_cmplx,New_NO_COEF_cmplx 
 !************************************************************************
