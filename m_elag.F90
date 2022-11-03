@@ -230,7 +230,7 @@ end subroutine elag_free
 !!
 !!  For complex orbs. with time-reversal symmetry [i.e. states p_alpha = (p_beta)* ]: 
 !!      < p_alpha q_beta | r_alpha s_beta > =  < p_alpha s_alpha | r_alpha q_beta >
-!!             and      Lpq integral (involving alpha beta) = Kpq integral (pure alpha)
+!!             and      Lij integral (alpha beta) = Kij integral (alpha alpha)
 !!
 !! INPUTS
 !!  RDMd=Object containg all required variables whose arrays are properly updated
@@ -265,9 +265,9 @@ subroutine build_elag(ELAGd,RDMd,INTEGd,DM2_J,DM2_K,DM2_L)
   ELAGd%Lambdas_im=zero
   do iorb=1,RDMd%NBF_occ
    ELAGd%Lambdas(iorb,:)=RDMd%occ(iorb)*real(INTEGd%hCORE_cmplx(:,iorb))                                        ! Init: Lambda_pq = n_p hCORE_qp
-   ELAGd%Lambdas_im(iorb,:)=RDMd%occ(iorb)*aimag(INTEGd%hCORE_cmplx(:,iorb))                                        ! Init: Lambda_pq = n_p hCORE_qp
+   ELAGd%Lambdas_im(iorb,:)=RDMd%occ(iorb)*aimag(INTEGd%hCORE_cmplx(:,iorb))                                    ! Init: Lambda_pq = n_p hCORE_qp
    if(INTEGd%iERItyp/=-1) then
-    ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+RDMd%DM2_iiii(iorb)*real(INTEGd%ERImol_cmplx(:,iorb,iorb,iorb))   ! any->iorb,iorb->iorb
+    ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+RDMd%DM2_iiii(iorb)*real(INTEGd%ERImol_cmplx(:,iorb,iorb,iorb))          ! any->iorb,iorb->iorb
     ELAGd%Lambdas_im(iorb,:)=ELAGd%Lambdas_im(iorb,:)+RDMd%DM2_iiii(iorb)*aimag(INTEGd%ERImol_cmplx(:,iorb,iorb,iorb))   ! any->iorb,iorb->iorb
     do iorb1=1,RDMd%NBF_occ
      if(iorb/=iorb1) then
@@ -281,14 +281,14 @@ subroutine build_elag(ELAGd,RDMd,INTEGd,DM2_J,DM2_K,DM2_L)
       elseif(INTEGd%iERItyp==1) then ! <ij|kl>
        ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_J(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb1,iorb,iorb1)) ! any->iorb,iorb1->iorb1
        ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_K(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb1,iorb1,iorb)) ! any->iorb1,iorb1->iorb
-       ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_L(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb,iorb1,iorb1)) ! any->iorb1,iorb->iorb1
+       ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_L(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb1,iorb1,iorb)) ! any->iorb1,iorb->iorb1
        ELAGd%Lambdas_im(iorb,:)=ELAGd%Lambdas_im(iorb,:)+DM2_J(iorb,iorb1)*aimag(INTEGd%ERImol_cmplx(:,iorb1,iorb,iorb1)) ! any->iorb,iorb1->iorb1
        ELAGd%Lambdas_im(iorb,:)=ELAGd%Lambdas_im(iorb,:)+DM2_K(iorb,iorb1)*aimag(INTEGd%ERImol_cmplx(:,iorb1,iorb1,iorb)) ! any->iorb1,iorb1->iorb
        ELAGd%Lambdas_im(iorb,:)=ELAGd%Lambdas_im(iorb,:)+DM2_L(iorb,iorb1)*aimag(INTEGd%ERImol_cmplx(:,iorb1,iorb1,iorb)) ! any->iorb1,iorb->iorb1
       elseif(INTEGd%iERItyp==2) then ! (ik|jl)
        ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_J(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb,iorb1,iorb1)) ! any->iorb,iorb1->iorb1
        ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_K(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb1,iorb1,iorb)) ! any->iorb1,iorb1->iorb
-       ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_L(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb1,iorb,iorb1)) ! any->iorb1,iorb->iorb1
+       ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_L(iorb,iorb1)*real(INTEGd%ERImol_cmplx(:,iorb1,iorb1,iorb)) ! any->iorb1,iorb->iorb1
        ELAGd%Lambdas_im(iorb,:)=ELAGd%Lambdas_im(iorb,:)+DM2_J(iorb,iorb1)*aimag(INTEGd%ERImol_cmplx(:,iorb,iorb1,iorb1)) ! any->iorb,iorb1->iorb1
        ELAGd%Lambdas_im(iorb,:)=ELAGd%Lambdas_im(iorb,:)+DM2_K(iorb,iorb1)*aimag(INTEGd%ERImol_cmplx(:,iorb1,iorb1,iorb)) ! any->iorb1,iorb1->iorb
        ELAGd%Lambdas_im(iorb,:)=ELAGd%Lambdas_im(iorb,:)+DM2_L(iorb,iorb1)*aimag(INTEGd%ERImol_cmplx(:,iorb1,iorb1,iorb)) ! any->iorb1,iorb->iorb1
