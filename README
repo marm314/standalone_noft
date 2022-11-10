@@ -78,10 +78,10 @@ Important! A subroutine called mo_ints must also be provided by the user. This s
 with a set of nat. orbs. coefs. (NO_COEF). The mo_ints subroutine updates the ONEBODY and ERI arrays (in the molecular/natural orb. basis). 
 This subroutine takes the following parameters 
 
-  subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,NO_COEF,ONEBODY,ERI)
+  subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,Occ,NO_COEF,ONEBODY,ERI)
 
 where all parameters were explained above except NBF_jkl. The NBF_jkl=NBF_tot if the ERI array uses (NBF_tot,NBF_tot,NBF_tot,NBF_tot), or
-NBF_jkl=NBF_occ if lowmemERI=TRUE and the size of the ERI array is only (NBF_tot,NBF_occ,NBF_occ,NBF_occ).
+NBF_jkl=NBF_occ if lowmemERI=TRUE and the size of the ERI array is only (NBF_tot,NBF_occ,NBF_occ,NBF_occ). Occ is the vector with occ numbers.
 
 This module runs the whole optimization procedure and prints all the details on the file: ofile_name.
 

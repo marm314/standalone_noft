@@ -143,11 +143,12 @@ end program noft_hubbard
 !!
 !! SOURCE
 
-subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,NO_COEF,hCORE,ERImol,ERImolv)
+subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,Occ,NO_COEF,hCORE,ERImol,ERImolv)
  use m_definitions
  use m_hubbard
  implicit none
  integer,intent(in)::NBF_tot,NBF_occ,NBF_jkl
+ real(dp),dimension(NBF_occ),intent(in)::Occ
  real(dp),optional,dimension(NBF_tot,NBF_tot),intent(inout)::hCORE
  real(dp),optional,dimension(NBF_tot,NBF_jkl,NBF_jkl,NBF_jkl),intent(inout)::ERImol
  real(dp),optional,dimension(NBF_tot*NBF_jkl*NBF_jkl*NBF_jkl),intent(inout)::ERImolv
