@@ -25,7 +25,7 @@ module m_gammatodm2
 
  implicit none
 
- private :: dm2_hf,dm2_mbb,dm2_power,dm2_pnof5,dm2_pnof7
+ private :: dm2_hf,dm2_mbb,dm2_power,dm2_pnof5,dm2_pnof7,dm2_gnof
 !!***
 
  public :: gamma_to_2rdm
