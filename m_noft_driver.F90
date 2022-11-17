@@ -88,10 +88,10 @@ contains
 subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
 &  Ncoupled_in,Nbeta_elect_in,Nalpha_elect_in,iERItyp_in,imethocc,imethorb,itermax,iprintdmn,iprintswdmn,&
 &  iprintints,itolLambda,ndiis,Enof,tolE_in,Vnn,AOverlap_in,occ_inout,mo_ints,ofile_name,NO_COEF,NO_COEF_cmplx,&
-&  lowmemERI,restart,ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,iNOTupdateocc,iNOTupdateORB,Lpower,fcidump)   ! Optional
+&  lowmemERI,restart,ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,iNOTupdateocc,iNOTupdateORB,Lpower,fcidump,range_sep)   ! Optional
 !Arguments ------------------------------------
 !scalars
- logical,optional,intent(in)::restart,lowmemERI,fcidump
+ logical,optional,intent(in)::restart,lowmemERI,fcidump,range_sep
  integer,optional,intent(in)::ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,iNOTupdateocc,iNOTupdateORB
  integer,intent(in)::INOF_in,Ista_in,imethocc,imethorb,itermax,iprintdmn,iprintints,iprintswdmn
  integer,intent(in)::NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,Ncoupled_in,itolLambda,ndiis  
@@ -100,13 +100,15 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  real(dp),intent(in)::Vnn,tolE_in
  real(dp),intent(inout)::Enof
  interface
-  subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,Occ,NO_COEF,hCORE,ERImol,ERImolv,NO_COEF_cmplx,hCORE_cmplx,ERImol_cmplx,ERImolv_cmplx)
+  subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,Occ,NO_COEF,hCORE,ERImol,ERImolv,ERImolH,&
+  & NO_COEF_cmplx,hCORE_cmplx,ERImol_cmplx,ERImolv_cmplx)
   use m_definitions
   implicit none
   integer,intent(in)::NBF_tot,NBF_occ,NBF_jkl
   real(dp),intent(in)::Occ(NBF_occ)
   real(dp),optional,intent(in)::NO_COEF(NBF_tot,NBF_tot)
   real(dp),optional,intent(inout)::hCORE(NBF_tot,NBF_tot)
+  real(dp),optional,intent(inout)::ERImolH(NBF_tot,NBF_jkl,NBF_jkl)
   real(dp),optional,intent(inout)::ERImol(NBF_tot,NBF_jkl,NBF_jkl,NBF_jkl)
   real(dp),optional,intent(inout)::ERImolv(NBF_tot*NBF_jkl*NBF_jkl*NBF_jkl)
   complex(dp),optional,intent(in)::NO_COEF_cmplx(NBF_tot,NBF_tot)
@@ -124,7 +126,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
 !Local variables ------------------------------
 !scalars
  logical::ekt,diagLpL,restart_param,keep_occs,keep_orbs,cpx_mos
- integer::iorb,iter,ifcidump
+ integer::iorb,iter,ifcidump,irs_noft
  real(dp)::Energy,Energy_old,Vee,hONEbody,chempot_val
  type(rdm_t),target::RDMd
  type(integ_t),target::INTEGd
@@ -136,6 +138,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
 !************************************************************************
 
  diagLpL=.true.; restart_param=.false.; ifcidump=0; keep_orbs=.false.; keep_occs=.false.; cpx_mos=.false.;
+ irs_noft=0;
 
  ! Initialize output
  call gitversion(sha_git) 
@@ -144,6 +147,11 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  ! Check whether to print a FCIDUMP file and the sw-RDMs
  if(present(fcidump)) then 
   if(fcidump) ifcidump=1
+ endif
+
+ ! Check whether to print a FCIDUMP file and the sw-RDMs
+ if(present(range_sep)) then 
+  if(range_sep) irs_noft=1
  endif
 
  ! Check if we use complex orbs
@@ -159,7 +167,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
    restart_param=.true.
    call echo_input(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
 &  Ncoupled_in,Nbeta_elect_in,Nalpha_elect_in,imethocc,imethorb,itermax,iprintdmn,iprintswdmn,&
-&  iprintints,itolLambda,ndiis,ifcidump,tolE_in,cpx_mos,restart=restart,ireadGAMMAS=ireadGAMMAS,&
+&  iprintints,itolLambda,ndiis,ifcidump,irs_noft,tolE_in,cpx_mos,restart=restart,ireadGAMMAS=ireadGAMMAS,&
 &  ireadocc=ireadocc,ireadCOEF=ireadCOEF,ireadFdiag=ireadFdiag,iNOTupdateocc=iNOTupdateocc,&
 &  iNOTupdateORB=iNOTupdateORB)
   else
@@ -168,13 +176,13 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
    restart_param=.false.
    call echo_input(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
 &  Ncoupled_in,Nbeta_elect_in,Nalpha_elect_in,imethocc,imethorb,itermax,iprintdmn,iprintswdmn,&
-&  iprintints,itolLambda,ndiis,ifcidump,tolE_in,cpx_mos)
+&  iprintints,itolLambda,ndiis,ifcidump,irs_noft,tolE_in,cpx_mos)
   endif
  else 
   restart_param=.false.
   call echo_input(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
 &  Ncoupled_in,Nbeta_elect_in,Nalpha_elect_in,imethocc,imethorb,itermax,iprintdmn,iprintswdmn,&
-&  iprintints,itolLambda,ndiis,ifcidump,tolE_in,cpx_mos)
+&  iprintints,itolLambda,ndiis,ifcidump,irs_noft,tolE_in,cpx_mos)
  endif
 
  ! Initialize RDMd, INTEGd, and ELAGd objects.
@@ -476,7 +484,7 @@ end subroutine run_noft
 
 subroutine echo_input(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
 &  Ncoupled_in,Nbeta_elect_in,Nalpha_elect_in,imethocc,imethorb,itermax,iprintdmn,iprintswdmn,&
-&  iprintints,itolLambda,ndiis,ifcidump,tolE_in,cpx_mos_in,restart,ireadGAMMAS,ireadocc,ireadCOEF,&
+&  iprintints,itolLambda,ndiis,ifcidump,irs_noft,tolE_in,cpx_mos_in,restart,ireadGAMMAS,ireadocc,ireadCOEF,&
 &  ireadFdiag,iNOTupdateocc,iNOTupdateORB)
 !Arguments ------------------------------------
 !scalars
@@ -484,7 +492,7 @@ subroutine echo_input(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in
  logical,optional,intent(in)::restart
  integer,optional,intent(in)::ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,iNOTupdateocc,iNOTupdateORB
  integer,intent(in)::INOF_in,Ista_in,imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints
- integer,intent(in)::NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,Ncoupled_in,ifcidump,itolLambda,ndiis  
+ integer,intent(in)::NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,Ncoupled_in,ifcidump,irs_noft,itolLambda,ndiis  
  integer,intent(in)::Nbeta_elect_in,Nalpha_elect_in
  real(dp),intent(in)::tolE_in
 !arrays
@@ -605,6 +613,8 @@ subroutine echo_input(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in
  write(msg,'(a,i12)') ' Print last hCORE and ERImol ints  ',iprintints
  call write_output(msg)
  write(msg,'(a,i12)') ' Print FCIDUMP file (true=1)       ',ifcidump
+ call write_output(msg)
+ write(msg,'(a,i12)') ' Do a range-sep NOFT (true=1)      ',irs_noft
  call write_output(msg)
  if(cpx_mos_in) then
   write(msg,'(a,i12)') ' Complex orbitals in use (true=1)  ',1
