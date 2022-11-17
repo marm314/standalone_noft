@@ -25,7 +25,7 @@ License:
 
 This module is written in Fortran (using ABINIT code structure to define procedures and objects, etc).
 It is based on the DoNOF code developed by Prof. Dr. M. Piris and Dr. I. Mitxelena
-(See https://github.com/DoNOF/DoNOFsw for more details).
+(See https://github.com/DoNOF/DoNOFsw for more details). It is also able to perform range-sep NOFT calculations.
 
 Compilation:  
 
