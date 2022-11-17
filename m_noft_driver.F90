@@ -108,9 +108,9 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
   real(dp),intent(in)::Occ(NBF_occ)
   real(dp),optional,intent(in)::NO_COEF(NBF_tot,NBF_tot)
   real(dp),optional,intent(inout)::hCORE(NBF_tot,NBF_tot)
-  real(dp),optional,intent(inout)::ERImolH(NBF_tot,NBF_jkl,NBF_jkl)
   real(dp),optional,intent(inout)::ERImol(NBF_tot,NBF_jkl,NBF_jkl,NBF_jkl)
   real(dp),optional,intent(inout)::ERImolv(NBF_tot*NBF_jkl*NBF_jkl*NBF_jkl)
+  real(dp),optional,intent(inout)::ERImolH(NBF_tot,NBF_jkl,NBF_jkl)
   complex(dp),optional,intent(in)::NO_COEF_cmplx(NBF_tot,NBF_tot)
   complex(dp),optional,intent(inout)::hCORE_cmplx(NBF_tot,NBF_tot)
   complex(dp),optional,intent(inout)::ERImol_cmplx(NBF_tot,NBF_jkl,NBF_jkl,NBF_jkl)
@@ -189,20 +189,20 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  if(INOF_in==101) then
   if(present(Lpower)) then
    call rdm_init(RDMd,INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,Ncoupled_in,&
-&  Nbeta_elect_in,Nalpha_elect_in,Lpower=Lpower)
+&  Nbeta_elect_in,Nalpha_elect_in,irs_noft,Lpower=Lpower)
   else
    call rdm_init(RDMd,INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,Ncoupled_in,&
-&  Nbeta_elect_in,Nalpha_elect_in)
+&  Nbeta_elect_in,Nalpha_elect_in,irs_noft)
   endif
  else
   call rdm_init(RDMd,INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,Ncoupled_in,&
-& Nbeta_elect_in,Nalpha_elect_in)
+& Nbeta_elect_in,Nalpha_elect_in,irs_noft)
  endif
  
  if(present(lowmemERI)) then
-  call integ_init(INTEGd,RDMd%NBF_tot,RDMd%NBF_occ,iERItyp_in,AOverlap_in,cpx_mos,lowmemERI=lowmemERI)
+  call integ_init(INTEGd,RDMd%NBF_tot,RDMd%NBF_occ,iERItyp_in,AOverlap_in,cpx_mos,irs_noft,lowmemERI=lowmemERI)
  else
-  call integ_init(INTEGd,RDMd%NBF_tot,RDMd%NBF_occ,iERItyp_in,AOverlap_in,cpx_mos)
+  call integ_init(INTEGd,RDMd%NBF_tot,RDMd%NBF_occ,iERItyp_in,AOverlap_in,cpx_mos,irs_noft)
  endif
  call elag_init(ELAGd,RDMd%NBF_tot,diagLpL,itolLambda,ndiis,imethorb,tolE_in,cpx_mos)
 
@@ -251,7 +251,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
   endif
   call INTEGd%eritoeriJKL(RDMd%NBF_occ)
   call opt_occ(iter,imethocc,keep_occs,RDMd,Vnn,Energy,hCORE=INTEGd%hCORE,ERI_J=INTEGd%ERI_J, &
-  & ERI_K=INTEGd%ERI_K,ERI_L=INTEGd%ERI_L) ! Also iter=iter+1
+  & ERI_K=INTEGd%ERI_K,ERI_L=INTEGd%ERI_L,ERI_H=INTEGd%ERI_H) ! Also iter=iter+1
  endif
  Energy_old=Energy
 
@@ -290,7 +290,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
    & ERI_K_cmplx=INTEGd%ERI_K_cmplx,ERI_L_cmplx=INTEGd%ERI_L_cmplx) ! Also iter=iter+1
   else
    call opt_occ(iter,imethocc,keep_occs,RDMd,Vnn,Energy,hCORE=INTEGd%hCORE,ERI_J=INTEGd%ERI_J, &
-   & ERI_K=INTEGd%ERI_K,ERI_L=INTEGd%ERI_L) ! Also iter=iter+1
+   & ERI_K=INTEGd%ERI_K,ERI_L=INTEGd%ERI_L,ERI_H=INTEGd%ERI_H) ! Also iter=iter+1
   endif
   call RDMd%print_gammas()
 
@@ -371,7 +371,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
   call occ_chempot(RDMd,hCORE_cmplx=INTEGd%hCORE_cmplx,ERI_J_cmplx=INTEGd%ERI_J_cmplx,&
   & ERI_K_cmplx=INTEGd%ERI_K_cmplx,ERI_L_cmplx=INTEGd%ERI_L_cmplx)
  else 
-  call occ_chempot(RDMd,hCORE=INTEGd%hCORE,ERI_J=INTEGd%ERI_J,ERI_K=INTEGd%ERI_K,ERI_L=INTEGd%ERI_L)
+  call occ_chempot(RDMd,hCORE=INTEGd%hCORE,ERI_J=INTEGd%ERI_J,ERI_K=INTEGd%ERI_K,ERI_L=INTEGd%ERI_L,ERI_H=INTEGd%ERI_H)
  endif
  chempot_val=-ten**(ten)
  do iorb=RDMd%Nfrozen+1,RDMd%NBF_occ
@@ -425,15 +425,23 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  ! Free all allocated RDMd, INTEGd, and ELAGd arrays
  call ELAGd%free() 
  call INTEGd%free()
- ! Reallocated INTEGd and print FCIDUMP file if required for real orbs
- if(ifcidump==1.and.(.not.cpx_mos)) then
+ ! Reallocated INTEGd and print FCIDUMP file if required for real orbs and not rs-NOFT calcs
+ if((ifcidump==1.and.(.not.cpx_mos)).and.irs_noft==1) then
+  write(msg,'(a)') ' '
+  call write_output(msg)
+  write(msg,'(a)') ' Warning! Unable to print the FCIDUMP file with range-sep ERIs.'
+  call write_output(msg)
+  write(msg,'(a)') ' '
+  call write_output(msg)
+ endif
+ if((ifcidump==1.and.(.not.cpx_mos)).and.irs_noft/=1) then
   write(msg,'(a)') ' '
   call write_output(msg)
   write(msg,'(a)') ' Reallocating the INTEGd to print the FCIDUMP file'
   call write_output(msg)
   write(msg,'(a)') ' '
   call write_output(msg)
-  call integ_init(INTEGd,RDMd%NBF_tot,RDMd%NBF_occ,iERItyp_in,AOverlap_in,cpx_mos)
+  call integ_init(INTEGd,RDMd%NBF_tot,RDMd%NBF_occ,iERItyp_in,AOverlap_in,cpx_mos,irs_noft)
   if(INTEGd%iERItyp/=-1) then
    call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF=NO_COEF,hCORE=INTEGd%hCORE, &
   & ERImol=INTEGd%ERImol)
