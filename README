@@ -43,7 +43,7 @@ By calling the subroutine run_noft
 
 the initialization parameters are
 
-    INOF=PNOFi functional to use (HF=0, Muller[using pairing]=100, PNOF5=5, and PNOF7=7)
+    INOF=PNOFi functional to use (HF=0, Muller[using pairing]=100, POWER=101, CA=102, CGA=103, GU=104, PNOF5=5, and PNOF7=7)
     Ista=Use PNOF7 (Ista=0) or PNOF7s (Ista=1)
     NBF_occ=Number of orbitals that are occupied
     Nfrozen=Number of frozen orbitals that remain with occ=2.0 
