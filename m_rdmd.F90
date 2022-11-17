@@ -32,6 +32,7 @@ module m_rdmd
  type,public :: rdm_t
 
   logical::GAMMAs_nread=.true.     ! Are GAMMAS read from previous calc.?
+  logical::range_sep=.false.       ! True for rs-NOFT calcs.
   integer::INOF=8                  ! Functional to use (5-> PNOF5, 7-> PNOF7, 8-> GNOF, etc)
   integer::Ista=0                  ! Use PNOF7s with Ista=1
   integer::Nfrozen                 ! Number of frozen orbitals in the NOFT calc.

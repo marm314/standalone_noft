@@ -32,6 +32,7 @@ module m_integd
  type,public :: integ_t
 
  logical::complex_ints=.false.   ! Set to true in case complex integrals are employed
+ logical::range_sep=.false.      ! true for rs-NOFT calcs.
  integer::iERItyp=0              ! Type of ERI notation to use DoNOF=0, Physicist=1, Chemist=2, Vectorial(Phys)=-1   
  integer::NBF_jkl=0              ! Size of the basis for the <:j|kl> terms
  integer::NBF2,NBF3,NBF4         ! Sizes used in the vectorial allocation of ERIs
