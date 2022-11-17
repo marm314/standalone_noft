@@ -68,8 +68,7 @@ subroutine opt_orb(iter,imethod,ELAGd,RDMd,INTEGd,Vnn,Energy,mo_ints,NO_COEF,NO_
  type(rdm_t),intent(inout)::RDMd
  type(integ_t),intent(inout)::INTEGd
  interface 
-  subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,Occ,NO_COEF,hCORE,ERImol,ERImolH,ERImolv,&
-  & NO_COEF_cmplx,hCORE_cmplx,ERImol_cmplx,ERImolv_cmplx)
+  subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,Occ,NO_COEF,hCORE,ERImol,ERImolv,NO_COEF_cmplx,hCORE_cmplx,ERImol_cmplx,ERImolv_cmplx)
   use m_definitions
   implicit none
   integer,intent(in)::NBF_tot,NBF_occ,NBF_jkl
@@ -77,7 +76,6 @@ subroutine opt_orb(iter,imethod,ELAGd,RDMd,INTEGd,Vnn,Energy,mo_ints,NO_COEF,NO_
   real(dp),optional,intent(in)::NO_COEF(NBF_tot,NBF_tot)
   real(dp),optional,intent(inout)::hCORE(NBF_tot,NBF_tot)
   real(dp),optional,intent(inout)::ERImol(NBF_tot,NBF_jkl,NBF_jkl,NBF_jkl)
-  real(dp),optional,intent(inout)::ERImolH(NBF_tot,NBF_jkl,NBF_jkl)
   real(dp),optional,intent(inout)::ERImolv(NBF_tot*NBF_jkl*NBF_jkl*NBF_jkl)
   complex(dp),optional,intent(in)::NO_COEF_cmplx(NBF_tot,NBF_tot)
   complex(dp),optional,intent(inout)::hCORE_cmplx(NBF_tot,NBF_tot)
