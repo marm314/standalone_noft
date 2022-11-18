@@ -143,6 +143,7 @@ subroutine opt_orb(iter,imethod,ELAGd,RDMd,INTEGd,Vnn,Energy,mo_ints,NO_COEF,NO_
   ! Build Lambda matrix
   call ELAGd%build(RDMd,INTEGd,RDMd%DM2_J,RDMd%DM2_K,RDMd%DM2_L,RDMd%DM2_Jsr)
 
+
   ! Check if these NO_COEF with the RDMs are already the solution =)
   call lambda_conv(ELAGd,RDMd,convLambda,sumdiff,maxdiff,maxdiff_all,iorbmax1,iorbmax2)
   if(convLambda) then
