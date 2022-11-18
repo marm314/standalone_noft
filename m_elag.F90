@@ -245,14 +245,15 @@ end subroutine elag_free
 !!
 !! SOURCE
 
-subroutine build_elag(ELAGd,RDMd,INTEGd,DM2_J,DM2_K,DM2_L,DM2_Jsr)
+subroutine build_elag(ELAGd,RDMd,INTEGd,DM2_J,DM2_K,DM2_L,DM2_Jsr,DM2_Lsr)
 !Arguments ------------------------------------
 !scalars
  class(elag_t),intent(inout)::ELAGd
  type(rdm_t),intent(inout)::RDMd
  type(integ_t),intent(in)::INTEGd
 !arrays
- real(dp),dimension(RDMd%NBF_occ,RDMd%NBF_occ),intent(inout)::DM2_J,DM2_K,DM2_L,DM2_Jsr
+ real(dp),dimension(RDMd%NBF_occ,RDMd%NBF_occ),intent(in)::DM2_J,DM2_K,DM2_L
+ real(dp),dimension(RDMd%NBF_occ,RDMd%NBF_occ),intent(in)::DM2_Jsr,DM2_Lsr
 !Local variables ------------------------------
 !scalars
  integer::iorb,iorb1,iorbv,iorbv1
@@ -324,7 +325,10 @@ subroutine build_elag(ELAGd,RDMd,INTEGd,DM2_J,DM2_K,DM2_L,DM2_Jsr)
    if(INTEGd%iERItyp/=-1) then
     ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+RDMd%DM2_iiii(iorb)*INTEGd%ERImol(:,iorb,iorb,iorb)   ! any->iorb,iorb->iorb
     do iorb1=1,RDMd%NBF_occ
-     if(INTEGd%range_sep) ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_Jsr(iorb,iorb1)*INTEGd%ERImolJsr(:,iorb1,iorb)!any->iorb,iorb1->iorb1 rsNOFT
+     if(INTEGd%range_sep/=0) then
+      ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_Jsr(iorb,iorb1)*INTEGd%ERImolJsr(:,iorb1,iorb) ! any->iorb,iorb1->iorb1 rs-NOFT
+      ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_Lsr(iorb,iorb1)*INTEGd%ERImolLsr(:,iorb,iorb1) ! any->iorb1,iorb->iorb1 rs-NOFT
+     endif
      if(iorb/=iorb1) then
       if(INTEGd%iERItyp==0) then ! DoNOF notation {ij|lk}
        ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_J(iorb,iorb1)*INTEGd%ERImol(:,iorb1,iorb1,iorb) ! any->iorb,iorb1->iorb1
@@ -348,7 +352,10 @@ subroutine build_elag(ELAGd,RDMd,INTEGd,DM2_J,DM2_K,DM2_L,DM2_Jsr)
     iorbv1=(iorb-1)*(INTEGd%NBF2+INTEGd%NBF3+INTEGd%NBF4)+INTEGd%NBF2
     ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+RDMd%DM2_iiii(iorb)*INTEGd%ERImolv(iorbv:iorbv1)   ! any->iorb,iorb->iorb
     do iorb1=1,RDMd%NBF_occ
-     if(INTEGd%range_sep) ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_Jsr(iorb,iorb1)*INTEGd%ERImolJsr(:,iorb1,iorb)!any->iorb,iorb1->iorb1 rs-NOFT
+     if(INTEGd%range_sep/=0) then
+      ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_Jsr(iorb,iorb1)*INTEGd%ERImolJsr(:,iorb1,iorb) ! any->iorb,iorb1->iorb1 rs-NOFT
+      ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_Lsr(iorb,iorb1)*INTEGd%ERImolLsr(:,iorb,iorb1) ! any->iorb1,iorb->iorb1 rs-NOFT
+     endif
      iorbv= (iorb1-1)*(INTEGd%NBF2+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF3+1
      iorbv1=(iorb1-1)*(INTEGd%NBF2+INTEGd%NBF4)+(iorb-1)*INTEGd%NBF3+INTEGd%NBF2
      ELAGd%Lambdas(iorb,:)=ELAGd%Lambdas(iorb,:)+DM2_J(iorb,iorb1)*INTEGd%ERImolv(iorbv:iorbv1) ! any->iorb,iorb1->iorb1
