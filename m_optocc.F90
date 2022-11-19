@@ -225,8 +225,8 @@ subroutine occ_chempot(RDMd,hCORE,ERI_J,ERI_K,ERI_L,ERI_Jsr,ERI_Lsr,hCORE_cmplx,
  type(rdm_t),intent(inout)::RDMd
 !arrays
  real(dp),optional,dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(in)::hCORE
- real(dp),optional,dimension(RDMd%NBF_ldiag),intent(in)::ERI_J,ERI_K,ERI_L 
- real(dp),optional,dimension(RDMd%NBF_ldiag),intent(in)::ERI_Jsr,ERI_Lsr 
+ real(dp),optional,dimension(RDMd%NBF_ldiag),intent(in)::ERI_J,ERI_K,ERI_L
+ real(dp),optional,dimension(RDMd%NBF_ldiag),intent(in)::ERI_Jsr,ERI_Lsr
  complex(dp),optional,dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(in)::hCORE_cmplx
  complex(dp),optional,dimension(RDMd%NBF_ldiag),intent(in)::ERI_J_cmplx,ERI_K_cmplx,ERI_L_cmplx 
 !Local variables ------------------------------
@@ -250,7 +250,7 @@ subroutine occ_chempot(RDMd,hCORE,ERI_J,ERI_K,ERI_L,ERI_Jsr,ERI_Lsr,hCORE_cmplx,
   call calc_E_occ_cmplx(RDMd,GAMMAs,Energy,hCORE_cmplx,ERI_J_cmplx,ERI_K_cmplx,ERI_L_cmplx,chempot=chempot)
   call calc_Chem_pot_cmplx(RDMd,hCORE_cmplx,ERI_J_cmplx,ERI_K_cmplx,ERI_L_cmplx)
  else
-  if(RDMd%range_sep/=0) then
+  if(RDMd%irange_sep/=0) then
    write(msg,'(a)') 'Warning! In rs-NOFT the chemical potential is computed without the d Exc / dn contribution.'
    call write_output(msg)
   endif

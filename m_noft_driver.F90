@@ -92,7 +92,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
 !Arguments ------------------------------------
 !scalars
  logical,optional,intent(in)::restart,lowmemERI,fcidump
- integer,optional,intent(in)::ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,iNOTupdateocc,iNOTupdateORB,irange_sep
+ integer,optional,intent(in)::ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,iNOTupdateocc,iNOTupdateORB,irange_sep  
  integer,intent(in)::INOF_in,Ista_in,imethocc,imethorb,itermax,iprintdmn,iprintints,iprintswdmn
  integer,intent(in)::NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,Ncoupled_in,itolLambda,ndiis  
  integer,intent(in)::Nbeta_elect_in,Nalpha_elect_in,iERItyp_in
@@ -152,7 +152,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
 
  ! Check whether to print a FCIDUMP file and the sw-RDMs
  if(present(irange_sep)) then 
-  irs_noft=irange_sep
+  if(irange_sep/=0) irs_noft=irange_sep
  endif
 
  ! Check if we use complex orbs
@@ -243,7 +243,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
   call opt_occ(iter,imethocc,keep_occs,RDMd,Vnn,Energy,hCORE_cmplx=INTEGd%hCORE_cmplx,ERI_J_cmplx=INTEGd%ERI_J_cmplx, &
   & ERI_K_cmplx=INTEGd%ERI_K_cmplx,ERI_L_cmplx=INTEGd%ERI_L_cmplx) ! Also iter=iter+1
  else
-  if(INTEGd%range_sep/=0) then
+  if(INTEGd%irange_sep/=0) then
    if(INTEGd%iERItyp/=-1) then
     call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF=NO_COEF,hCORE=INTEGd%hCORE, &
    & ERImol=INTEGd%ERImol,ERImolJsr=INTEGd%ERImolJsr,ERImolLsr=INTEGd%ERImolLsr)
@@ -446,7 +446,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
   write(msg,'(a)') ' '
   call write_output(msg)
  endif
- if((ifcidump==1.and.(.not.cpx_mos)).and.irs_noft/=0) then
+ if((ifcidump==1.and.(.not.cpx_mos)).and.irs_noft==0) then
   write(msg,'(a)') ' '
   call write_output(msg)
   write(msg,'(a)') ' Reallocating the INTEGd to print the FCIDUMP file'
@@ -636,7 +636,7 @@ subroutine echo_input(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in
  call write_output(msg)
  write(msg,'(a,i12)') ' Do a range-sep NOFT               ',irs_noft
  call write_output(msg)
- write(msg,'(a)')     ' (0=no, 1=intra, and 2=hartree)    '
+ write(msg,'(a)')     ' (0=no, 1=rs-intra, 2=rs-ex-corr)  '
  call write_output(msg)
  if(cpx_mos_in) then
   write(msg,'(a,i12)') ' Complex orbitals in use (true=1)  ',1

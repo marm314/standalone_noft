@@ -32,7 +32,7 @@ module m_rdmd
  type,public :: rdm_t
 
   logical::GAMMAs_nread=.true.     ! Are GAMMAS read from previous calc.?
-  integer::range_sep=0             ! 0=no, 1=intra, 2=Hartree
+  integer::irange_sep=0            ! rs-NOFT calcs. 0=no, 1=intra, 2=ex_corr
   integer::INOF=8                  ! Functional to use (5-> PNOF5, 7-> PNOF7, 8-> GNOF, etc)
   integer::Ista=0                  ! Use PNOF7s with Ista=1
   integer::Nfrozen                 ! Number of frozen orbitals in the NOFT calc.
@@ -127,7 +127,7 @@ subroutine rdm_init(RDMd,INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,&
  character(len=200)::msg
 !************************************************************************
 
- if(irs_noft/=0) RDMd%range_sep=irs_noft
+ if(irs_noft/=0) RDMd%irange_sep=irs_noft
  RDMd%INOF=INOF
  if(RDMd%INOF==101) then
   if(present(Lpower)) then
@@ -147,7 +147,7 @@ subroutine rdm_init(RDMd,INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,&
  RDMd%NBF_ldiag=RDMd%NBF_occ*(RDMd%NBF_occ+1)/2
  RDMd%Ngammas=RDMd%Ncoupled*RDMd%Npairs
  ! Calculate memory needed
- totMEM=5*RDMd%NBF_occ*RDMd%NBF_occ+RDMd%NBF_occ*RDMd%Ngammas+5*RDMd%NBF_occ*RDMd%NBF_occ*RDMd%Ngammas
+ totMEM=5*RDMd%NBF_occ*RDMd%NBF_occ+RDMd%NBF_occ*RDMd%Ngammas+4*RDMd%NBF_occ*RDMd%NBF_occ*RDMd%Ngammas
  totMEM=totMEM+RDMd%Ngammas+5*RDMd%NBF_occ
  totMEM=8*totMEM       ! Bytes
  totMEM=totMEM*tol6    ! Bytes to Mb  
