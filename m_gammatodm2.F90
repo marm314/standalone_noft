@@ -817,6 +817,7 @@ end subroutine dm2_power
 !!
 !! INPUTS
 !! sqrt_occ=Square root of the occupancies of the frozen + active orbitals
+=======
 !! Dsqrt_occ_gamma=Matrix with the derivative of sqrt(occ numbers) vs gamma
 !!
 !! OUTPUT
