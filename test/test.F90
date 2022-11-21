@@ -41,7 +41,7 @@ program noft_hubbard
  use m_noft_driver
  implicit none
  integer::INOF,Ista=0,NBF_tot,NBF_occ,Nfrozen,Npairs
- integer::Ncoupled=1,Nbeta_elect,Nalpha_elect,iERItyp=-1
+ integer::Ncoupled=1,Nbeta_elect,Nalpha_elect
  integer::imethocc=1,imethorb=1,itermax=10000,iprintdmn=0,iprintswdmn=0,iprintints=0
  integer::itolLambda=5,ndiis=5,iguess=0
  real(dp)::Enof,tolE=tol9,Vnn=zero
@@ -113,7 +113,7 @@ program noft_hubbard
  ! Initialize and run the optimization
  Occ=zero
  call run_noft(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect,&
- &  iERItyp,imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,&
+ &  imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,&
  &  Enof,tolE,Vnn,SITE_Overlap,Occ,mo_ints,ofile_name,NO_COEF=NO_COEF)
  ! Print the optimal energy 
  write(*,'(a)') ' '
@@ -143,7 +143,7 @@ end program noft_hubbard
 !!
 !! SOURCE
 
-subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,Occ,NO_COEF,hCORE,ERImol,ERImolv)
+subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,Occ,NO_COEF,hCORE,ERImol)
  use m_definitions
  use m_hubbard
  implicit none
@@ -151,10 +151,9 @@ subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,Occ,NO_COEF,hCORE,ERImol,ERImolv)
  real(dp),dimension(NBF_occ),intent(in)::Occ
  real(dp),optional,dimension(NBF_tot,NBF_tot),intent(inout)::hCORE
  real(dp),optional,dimension(NBF_tot,NBF_jkl,NBF_jkl,NBF_jkl),intent(inout)::ERImol
- real(dp),optional,dimension(NBF_tot*NBF_jkl*NBF_jkl*NBF_jkl),intent(inout)::ERImolv
  real(dp),optional,dimension(NBF_tot,NBF_tot),intent(in)::NO_COEF
  real(dp),allocatable,dimension(:,:)::TMP_hCORE
- integer::isite,isite1,isitev,NBF2,NBF3,NBF4
+ integer::isite,isite1
 
  !write(*,*) ' Starting transformation of hCORE and ERI integrals'
  ! Compute hCORE (initially SITE_hCORE, in the end hCORE)
@@ -172,27 +171,11 @@ subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,Occ,NO_COEF,hCORE,ERImol,ERImolv)
  deallocate(TMP_hCORE)
 
  ! Compute ERImol (initially SITE_ERI, in the end ERImol)
- if(present(ERImol)) then
-  ERImol=zero
-  do isite=1,NBF_tot
-   ERImol(isite,isite,isite,isite)=U
-  enddo
-  call transformERI(NBF_tot,NO_COEF,ERImol) ! Site -> Nat. orbs.
- endif
-
- ! Compute ERImol (initially SITE_ERI, in the end ERImolv). Here NBF_jkl=NBF_tot
- if(present(ERImolv)) then
-  ERImolv=zero
-  do isite=1,NBF_tot
-   NBF2=NBF_tot
-   NBF3=NBF2*NBF_jkl
-   NBF4=NBF3*NBF_jkl
-   isitev=(isite-1)*(1+NBF2+NBF3+NBF4)+1
-   ERImolv(isitev)=U
-  enddo
-  call transformERIv(NBF_tot,NO_COEF,ERImolv) ! Site -> Nat. orbs.
- endif
- !write(*,*) ' Transformation of hCORE and ERI integrals finished'
+ ERImol=zero
+ do isite=1,NBF_tot
+  ERImol(isite,isite,isite,isite)=U
+ enddo
+ call transformERI(NBF_tot,NO_COEF,ERImol) ! Site -> Nat. orbs.
 
 end subroutine mo_ints
 !!***
@@ -279,115 +262,4 @@ subroutine transformERI(NBF,NO_COEF,ERImol)
  deallocate(TMP_ERI)
 
 end subroutine transformERI
-!!***
-
-!!***
-!!****f* DoNOF/transformERIv
-!! NAME
-!! transformERIv
-!!
-!! FUNCTION
-!!  Transform the ERI from SITE basis to the 'molecular basis'
-!!
-!! INPUTS
-!!
-!! OUTPUT
-!!
-!! PARENTS
-!!  
-!! CHILDREN
-!!
-!! SOURCE
-
-subroutine transformERIv(NBF,NO_COEF,ERImolv)
- use m_definitions
- implicit none
- integer,intent(in)::NBF
- double precision,dimension(NBF*NBF*NBF*NBF),intent(inout)::ERImolv
- double precision,dimension(NBF,NBF),intent(in)::NO_COEF
- double precision,dimension(:),allocatable::TMP_ERIv
- integer::i,j,k,l,m,ii,jj,kk,ll,mm,NBF2,NBF3,NBF4
- NBF2=NBF
- NBF3=NBF2*NBF
- NBF4=NBF3*NBF
- allocate(TMP_ERIv(NBF*NBF*NBF*NBF))
- ! L -> S
- TMP_ERIv=zero
- do i=1,NBF
-  ii=i-1
-  do j=1,NBF
-   jj=j-1
-   do k=1,NBF
-    kk=k-1
-    do m=1,NBF
-     mm=m-1
-     do l=1,NBF
-      ll=l-1
-      TMP_ERIv(ii+jj*NBF2+kk*NBF3+mm*NBF4+1)=TMP_ERIv(ii+jj*NBF2+kk*NBF3+mm*NBF4+1)&
-        &        +NO_COEF(l,m)*ERImolv(ii+jj*NBF2+kk*NBF3+ll*NBF4+1)
-     enddo
-    enddo
-   enddo
-  enddo
- enddo
- ! K -> R
- ERImolv=zero
- do i=1,NBF
-  ii=i-1
-  do j=1,NBF
-   jj=j-1
-   do m=1,NBF
-    mm=m-1
-    do l=1,NBF
-     ll=l-1
-     do k=1,NBF
-      kk=k-1
-      ERImolv(ii+jj*NBF2+mm*NBF3+ll*NBF4+1)=ERImolv(ii+jj*NBF2+mm*NBF3+ll*NBF4+1)&
-        &       +NO_COEF(k,m)*TMP_ERIv(ii+jj*NBF2+kk*NBF3+ll*NBF4+1)
-     enddo
-    enddo
-   enddo
-  enddo
- enddo
- ! J -> Q
- TMP_ERIv=zero
- do i=1,NBF
-  ii=i-1
-  do m=1,NBF
-   mm=m-1
-   do k=1,NBF
-    kk=k-1
-    do l=1,NBF
-     ll=l-1
-     do j=1,NBF
-      jj=j-1
-      TMP_ERIv(ii+mm*NBF2+kk*NBF3+ll*NBF4+1)=TMP_ERIv(ii+mm*NBF2+kk*NBF3+ll*NBF4+1)&
-       &         +NO_COEF(j,m)*ERImolv(ii+jj*NBF2+kk*NBF3+ll*NBF4+1)
-     enddo
-    enddo
-   enddo
-  enddo
- enddo
- ! I -> P
- ERImolv=zero
- do m=1,NBF
-  mm=m-1
-  do j=1,NBF
-   jj=j-1
-   do k=1,NBF
-    kk=k-1
-    do l=1,NBF
-     ll=l-1
-     do i=1,NBF
-      ii=i-1
-      ERImolv(mm+jj*NBF2+kk*NBF3+ll*NBF4+1)=ERImolv(mm+jj*NBF2+kk*NBF3+ll*NBF4+1)&
-       &        +NO_COEF(i,m)*TMP_ERIv(ii+jj*NBF2+kk*NBF3+ll*NBF4+1)
-     enddo
-    enddo
-   enddo
-  enddo
- enddo
- deallocate(TMP_ERIv)
-
-end subroutine transformERIv
 !!***
