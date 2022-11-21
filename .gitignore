@@ -30,3 +30,4 @@ m_definitions.mod
 gitver.F90
 test/m_hubbard.mod
 tes/test.x
+test.x
