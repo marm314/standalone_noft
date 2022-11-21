@@ -40,6 +40,7 @@ program noft_hubbard
  use m_hubbard
  use m_noft_driver
  implicit none
+ logical::restart=.false.
  integer::INOF,Ista=0,NBF_tot,NBF_occ,Nfrozen,Npairs
  integer::Ncoupled=1,Nbeta_elect,Nalpha_elect
  integer::imethocc=1,imethorb=1,itermax=10000,iprintdmn=0,iprintswdmn=0,iprintints=0
@@ -53,9 +54,11 @@ program noft_hubbard
  integer::isite,isite1,lwork,info
 
  ! Read parameters
- if(iargc()/=5) then
+ if(iargc()/=5 .and. iargc()/=6) then
   write(*,'(a)') 'Include the arguments:'
   write(*,'(a)') ' INOF(integer) Nsites(integer) Nalpha_electrons(integer) U(real) iguess(0 Hcore, 1 site basis)'
+  write(*,'(a)') ' or'
+  write(*,'(a)') ' INOF(integer) Nsites(integer) Nalpha_electrons(integer) U(real) iguess(0 Hcore, 1 site basis) R(restart)'
   stop
  endif
  call getarg(1,arg)
@@ -68,6 +71,8 @@ program noft_hubbard
  read(arg,'(f20.8)') U
  call getarg(5,arg)
  read(arg,'(i4)') iguess
+ restart=.false.
+ if(iargc()==6) restart=.true.
 
  ! Hubbard parameteres
  t=one          ! We fix this one and tune U
@@ -112,9 +117,18 @@ program noft_hubbard
  endif
  ! Initialize and run the optimization
  Occ=zero
- call run_noft(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect,&
- &  imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,&
- &  Enof,tolE,Vnn,SITE_Overlap,Occ,mo_ints,ofile_name,NO_COEF=NO_COEF)
+ if(.not.restart) then
+  write(*,*) 'running NOFT module'
+  call run_noft(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect,&
+ &   imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,&
+ &   Enof,tolE,Vnn,SITE_Overlap,Occ,mo_ints,ofile_name,NO_COEF=NO_COEF)
+ else
+  write(*,*) 'running NOFT module with restart'
+  call run_noft(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect,&
+  & imethocc,imethorb,itermax,0,0,0,itolLambda,ndiis,Enof,tolE,Vnn,SITE_overlap,Occ,&
+  & mo_ints,ofile_name,NO_COEF=NO_COEF,restart=.true.,ireadGAMMAS=1,ireadOCC=1,ireadCOEF=1,&
+  & ireadFdiag=1,iNOTupdateOCC=0,iNOTupdateORB=0)
+ endif
  ! Print the optimal energy 
  write(*,'(a)') ' '
  write(*,'(a,f12.6)') 'NOFT SCF energy',Enof

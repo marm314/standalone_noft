@@ -88,7 +88,7 @@ This module runs the whole optimization procedure and prints all the details on 
 Example: 
  
  See the test included. There we use test this module using the Hubbard model; we illustrate how to initialize the module and
- how to build a mo_ints subroutine
+ how to build a mo_ints subroutine and use restart.
 
 Warning: 
 
