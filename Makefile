@@ -13,6 +13,7 @@ all:
 	gfortran -Wall -c m_e_grad_occ_cpx.F90
 	gfortran -Wall -c m_optocc.F90
 	gfortran -Wall -c m_optorb.F90
+	gfortran -Wall -c m_tz_pccd_amplitudes.F90
 	gfortran -Wall -c gitver.F90
 	gfortran -Wall -c m_noft_driver.F90
 clean:
