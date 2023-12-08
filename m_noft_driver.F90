@@ -28,6 +28,7 @@ module m_noft_driver
  use m_elag
  use m_optocc
  use m_optorb
+ use m_tz_pCCD_amplitudes
 
  implicit none
 
@@ -232,6 +233,9 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
   call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF_cmplx=NO_COEF_cmplx, &
   & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx)
   call INTEGd%eritoeriJKL(RDMd%NBF_occ)
+  if(RDMd%INOF<0) then
+   call calc_tz_pCCD_amplitudes(ELAGd,RDMd,INTEGd,Vnn,Energy,iter,imethocc,keep_occs)
+  endif
   call opt_occ(iter,imethocc,keep_occs,RDMd,Vnn,Energy,hCORE_cmplx=INTEGd%hCORE_cmplx,ERI_J_cmplx=INTEGd%ERI_J_cmplx, &
   & ERI_K_cmplx=INTEGd%ERI_K_cmplx,ERI_L_cmplx=INTEGd%ERI_L_cmplx) ! Also iter=iter+1
  else
@@ -244,6 +248,9 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
    & ERImol=INTEGd%ERImol)
   endif
   call INTEGd%eritoeriJKL(RDMd%NBF_occ)
+  if(RDMd%INOF<0) then
+   call calc_tz_pCCD_amplitudes(ELAGd,RDMd,INTEGd,Vnn,Energy,iter,imethocc,keep_occs)
+  endif
   call opt_occ(iter,imethocc,keep_occs,RDMd,Vnn,Energy,hCORE=INTEGd%hCORE,ERI_J=INTEGd%ERI_J, &
   & ERI_K=INTEGd%ERI_K,ERI_L=INTEGd%ERI_L,ERI_Jsr=INTEGd%ERI_Jsr,ERI_Lsr=INTEGd%ERI_Lsr) ! Also iter=iter+1
  endif
@@ -280,13 +287,20 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
 
   ! occ. optimization
   if(cpx_mos) then
+   if(RDMd%INOF<0) then
+    call calc_tz_pCCD_amplitudes(ELAGd,RDMd,INTEGd,Vnn,Energy,iter,imethocc,keep_occs)
+   endif
    call opt_occ(iter,imethocc,keep_occs,RDMd,Vnn,Energy,hCORE_cmplx=INTEGd%hCORE_cmplx,ERI_J_cmplx=INTEGd%ERI_J_cmplx, &
    & ERI_K_cmplx=INTEGd%ERI_K_cmplx,ERI_L_cmplx=INTEGd%ERI_L_cmplx) ! Also iter=iter+1
   else
+   if(RDMd%INOF<0) then
+    call calc_tz_pCCD_amplitudes(ELAGd,RDMd,INTEGd,Vnn,Energy,iter,imethocc,keep_occs)
+   endif
    call opt_occ(iter,imethocc,keep_occs,RDMd,Vnn,Energy,hCORE=INTEGd%hCORE,ERI_J=INTEGd%ERI_J, &
    & ERI_K=INTEGd%ERI_K,ERI_L=INTEGd%ERI_L,ERI_Jsr=INTEGd%ERI_Jsr,ERI_Lsr=INTEGd%ERI_Lsr) ! Also iter=iter+1
   endif
   call RDMd%print_gammas()
+  if(RDMd%INOF<0) call RDMd%print_tz_amplitudes()
 
   ! Check convergence
   if(dabs(Energy-Energy_old)<ELAGd%tolE) then
@@ -300,15 +314,17 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
 
  enddo
 
- ! Print <S^2> expectation value
- if(cpx_mos) then
-  call s2_calc(RDMd,INTEGd,NO_COEF_cmplx=NO_COEF_cmplx)
- else
-  call s2_calc(RDMd,INTEGd,NO_COEF=NO_COEF)
+ ! Print <S^2> expectation value (except for pCCD. TODO)
+ if(RDMd%INOF>-1) then
+  if(cpx_mos) then
+   call s2_calc(RDMd,INTEGd,NO_COEF_cmplx=NO_COEF_cmplx)
+  else
+   call s2_calc(RDMd,INTEGd,NO_COEF=NO_COEF)
+  endif
  endif
 
  ! Print optimized (spin-with?) 1,2-RDMs
- if(iprintswdmn==1) call RDMd%print_swdmn() 
+ if(iprintswdmn==1.and.RDMd%INOF>-1) call RDMd%print_swdmn() 
  if(iprintdmn==1) call RDMd%print_dmn(RDMd%DM2_J,RDMd%DM2_K,RDMd%DM2_L) 
 
  ! Print hCORE and ERImol integrals in the last (opt) NO_COEF basis (if lowmemERI=.false. NBF_tot, otherwise only NBF_occ)
@@ -367,8 +383,8 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
   call RDMd%print_orbs_bin(COEF=NO_COEF)
  endif
 
- ! Calculate the chem. pot. = d E / d occ if it is not rs-NOFT
- if(irs_noft==0) then
+ ! Calculate the chem. pot. = d E / d occ if it is not rs-NOFT and pCCD (resets occ in [0:1])
+ if(irs_noft==0 .and. RDMd%INOF>-1) then
   if(cpx_mos) then
    call occ_chempot(RDMd,hCORE_cmplx=INTEGd%hCORE_cmplx,ERI_J_cmplx=INTEGd%ERI_J_cmplx,&
    & ERI_K_cmplx=INTEGd%ERI_K_cmplx,ERI_L_cmplx=INTEGd%ERI_L_cmplx)
@@ -399,8 +415,11 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
   call write_output(msg)
  endif
 
- ! Print final Energy and its components (occs are already [0:2])
- RDMd%occ(:)=two*RDMd%occ(:)
+ ! Print final Energy and its components (occs are already [0:2] in rs-NOFT and pCCD because we did not compute chem. pot.)
+ if(irs_noft==0 .and. RDMd%INOF>-1) then
+  RDMd%occ(:)=two*RDMd%occ(:)
+ endif
+
  hONEbody=zero
  if(cpx_mos) then
   do iorb=1,RDMd%NBF_occ
@@ -530,6 +549,13 @@ subroutine echo_input(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in
   call write_output(msg)
   write(msg,'(a)') ' L. Cohen and C. Frisberg, J. Chem. Phys, 65, 4234 (1976)'
   call write_output(msg)
+ elseif(INOF_in==-1) then
+  write(msg,'(a)') ' Using pCCD approximation'
+  call write_output(msg)
+  write(msg,'(a)') ' T. Stein, T.M. Henderson, and G.E. Scuseria, J. Chem. Phys., 140, 214113 (2014)'
+  call write_output(msg)
+  write(msg,'(a)') ' T.M. Henderson, I.W. Bulik, T. Stein and G.E. Scuseria, J. Chem. Phys., 141, 244104 (2014)'
+  call write_output(msg)
  elseif(INOF_in==100) then
   write(msg,'(a)') ' Using Muller-Baerends-Buijse approximation'
   call write_output(msg)
@@ -627,7 +653,7 @@ subroutine echo_input(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in
  call write_output(msg)
  write(msg,'(a,i12)') ' Do a range-sep NOFT               ',irs_noft
  call write_output(msg)
- write(msg,'(a)')     ' (0=no, 1=rs-intra, 2=rs-ex-corr)  '
+ write(msg,'(a)')     ' (0=no, 1=rs-inter, 2=rs-ex-corr)  '
  call write_output(msg)
  if(cpx_mos_in) then
   write(msg,'(a,i12)') ' Complex orbitals in use (true=1)  ',1
@@ -694,7 +720,7 @@ subroutine read_restart(RDMd,ELAGd,ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,AOv
  complex(dp)::cpxvar
 !arrays
  real(dp),allocatable,dimension(:)::GAMMAS_in,tmp_occ
- real(dp),allocatable,dimension(:,:)::NO_COEF_in,S_NO
+ real(dp),allocatable,dimension(:,:)::NO_COEF_in,S_NO,TZ_amp
  complex(dp),allocatable,dimension(:,:)::NO_COEF_cmplx_in,S_NO_cmplx
  character(len=200)::msg
 !************************************************************************
@@ -802,35 +828,88 @@ subroutine read_restart(RDMd,ELAGd,ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,AOv
 
  ! Read GAMMAs (indep. parameters used to optimize occs.) from GAMMAS file 
  if(ireadGAMMAS==1) then
-  allocate(GAMMAS_in(RDMd%Ngammas))
-  open(unit=iunit,form='unformatted',file='GAMMAS',iostat=istat,status='old')
-  icount=0
-  if(istat==0) then
-   do 
-    read(iunit,iostat=istat) intvar,doubvar
-    if(istat/=0) then
-     exit
-    endif
-    if((intvar/=0).and.intvar<=RDMd%Ngammas) then
-     GAMMAs_in(intvar)=doubvar
-     icount=icount+1
-    else
-     exit
-    endif
-   enddo
+  if(RDMd%INOF>-1) then
+   allocate(GAMMAS_in(RDMd%Ngammas))
+   open(unit=iunit,form='unformatted',file='GAMMAS',iostat=istat,status='old')
+   icount=0
+   if(istat==0) then
+    do 
+     read(iunit,iostat=istat) intvar,doubvar
+     if(istat/=0) then
+      exit
+     endif
+     if((intvar/=0).and.intvar<=RDMd%Ngammas) then
+      GAMMAs_in(intvar)=doubvar
+      icount=icount+1
+     else
+      exit
+     endif
+    enddo
+   endif
+   if(icount==RDMd%Ngammas) then
+    RDMd%GAMMAs_old(:)=GAMMAS_in(:)
+    RDMd%GAMMAs_nread=.false.
+    write(msg,'(a)') 'GAMMAs (indep. variables) read from checkpoint file'
+    call write_output(msg)
+   endif
+   close(iunit)
+   deallocate(GAMMAS_in)
+  else ! pCCD
+   allocate(TZ_amp(RDMd%Npairs,RDMd%NBF_occ-(RDMd%Nfrozen+RDMd%Npairs)))
+   open(unit=iunit,form='unformatted',file='TAMP',iostat=istat,status='old')
+   icount=0
+   if(istat==0) then
+    do 
+     read(iunit,iostat=istat) intvar,intvar1,doubvar
+     if(istat/=0) then
+      exit
+     endif
+     if(((intvar/=0).and.(intvar1/=0)).and.intvar*intvar1<=RDMd%Namplitudes*RDMd%Namplitudes) then
+      TZ_amp(intvar,intvar1)=doubvar
+      icount=icount+1
+     else
+      exit
+     endif
+    enddo
+   endif
+   if(icount==RDMd%Namplitudes) then
+    RDMd%t_pccd(:,:)=TZ_amp(:,:)
+    RDMd%t_pccd_old(:,:)=TZ_amp(:,:)
+    RDMd%t_amplitudes_nread=.false.
+    write(msg,'(a)') 'T amplitudes read from checkpoint file'
+    call write_output(msg)
+   endif
+   close(iunit)
+   open(unit=iunit,form='unformatted',file='ZAMP',iostat=istat,status='old')
+   icount=0
+   if(istat==0) then
+    do
+     read(iunit,iostat=istat) intvar,intvar1,doubvar
+     if(istat/=0) then
+      exit
+     endif
+     if(((intvar/=0).and.(intvar1/=0)).and.intvar*intvar1<=RDMd%Namplitudes*RDMd%Namplitudes) then
+      TZ_amp(intvar,intvar1)=doubvar
+      icount=icount+1
+     else
+      exit
+     endif
+    enddo
+   endif
+   if(icount==RDMd%Namplitudes) then
+    RDMd%z_pccd(:,:)=TZ_amp(:,:)
+    RDMd%z_pccd_old(:,:)=TZ_amp(:,:)
+    RDMd%z_amplitudes_nread=.false.
+    write(msg,'(a)') 'Z amplitudes read from checkpoint file'
+    call write_output(msg)
+   endif
+   close(iunit)
+   deallocate(TZ_amp)
   endif
-  if(icount==RDMd%Ngammas) then
-   RDMd%GAMMAs_old(:)=GAMMAS_in(:)
-   RDMd%GAMMAs_nread=.false.
-   write(msg,'(a)') 'GAMMAs (indep. variables) read from checkpoint file'
-   call write_output(msg)
-  endif
-  close(iunit)
-  deallocate(GAMMAS_in)
  endif
 
- ! Read occs to compute GAMMAS (using DM1 or FORM_occ files)
- if(ireadocc==1) then
+ ! Read occs to compute GAMMAS (using DM1 or FORM_occ files) except in pCCD case
+ if(ireadocc==1 .and. RDMd%INOF>-1) then
   ! Reading DM1 binary file
   open(unit=iunit,form='unformatted',file='DM1',iostat=istat,status='old')
   icount=0

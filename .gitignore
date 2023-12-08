@@ -31,3 +31,5 @@ gitver.F90
 test/m_hubbard.mod
 tes/test.x
 test.x
+m_tz_pccd_amplitudes.mod
+m_tz_pccd_amplitudes.o

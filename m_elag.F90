@@ -56,6 +56,7 @@ module m_elag
 ! arrays 
   real(dp),allocatable,dimension(:)::F_diag         ! F_pp (Diag. part of the F matrix)
   real(dp),allocatable,dimension(:)::Coef_DIIS      ! DIIS coefs. used to build linear comb. of F matrices
+  real(dp),allocatable,dimension(:)::Lambdas_pp     ! Lambda_pp (Diagonal Lagrange multipliers matrix)
   real(dp),allocatable,dimension(:,:)::Lambdas      ! Lambda_pq (Lagrange multipliers matrix)
   real(dp),allocatable,dimension(:,:)::Lambdas_im   ! Lambda_pq (Lagrange multipliers matrix imag part)
   real(dp),allocatable,dimension(:,:)::DIIS_mat     ! DIIS matrix used to solve the system of eqs. DIIS_MAT*Coef_DIIS = (0 0 ... 0 1) 
@@ -71,6 +72,9 @@ module m_elag
 
    procedure :: build => build_elag
    ! Use integrals and the 1,2-RDM to build Lambdas matrix.
+
+   procedure :: build_sd_diag => build_sd_diag_elag
+   ! Use integrals to build Lambdas_pp diagonal elements.
 
    procedure :: diag_lag => diag_lambda_ekt
    ! Diagonalize the matrix Lambdas (or divided by occ. numbers) to compute canonical orbs. or EKT.
@@ -132,7 +136,7 @@ subroutine elag_init(ELAGd,NBF_tot,diagLpL_in,itolLambda_in,ndiis_in,imethod_in,
  ELAGd%tolE=tolE_in
  ! Calculate memory needed
  if(cpx_mos) then
-  totMEM=NBF_tot+2*NBF_tot*NBF_tot
+  totMEM=2*NBF_tot+2*NBF_tot*NBF_tot
   if(ELAGd%ndiis>0.and.ELAGd%imethod==1) then
    totMEM=totMEM+2*ELAGd%ndiis_array+8*ELAGd%ndiis_array*NBF_tot*NBF_tot+4*ELAGd%ndiis_array*ELAGd%ndiis_array
   endif
@@ -153,6 +157,7 @@ subroutine elag_init(ELAGd,NBF_tot,diagLpL_in,itolLambda_in,ndiis_in,imethod_in,
  endif
  call write_output(msg)
  ! Allocate arrays
+ allocate(ELAGd%Lambdas_pp(NBF_tot))
  allocate(ELAGd%F_diag(NBF_tot))
  allocate(ELAGd%Lambdas(NBF_tot,NBF_tot)) 
  if(cpx_mos) then
@@ -202,6 +207,7 @@ subroutine elag_free(ELAGd)
 
  deallocate(ELAGd%F_diag) 
  deallocate(ELAGd%Lambdas)
+ deallocate(ELAGd%Lambdas_pp)
  
  if(ELAGd%cpx_lambdas) then
   deallocate(ELAGd%Lambdas_im)
@@ -226,7 +232,7 @@ end subroutine elag_free
 !! build_elag
 !!
 !! FUNCTION
-!!  Build the Lagrange multipliers Lambda matrix. Nothe that the electron rep. integrals are given in DoNOF format
+!!  Build the Lagrange multipliers Lambda matrix. Note that the electron rep. integrals are given in DIRAC's format
 !!
 !!  For complex orbs. with time-reversal symmetry [i.e. states p_alpha = (p_beta)* ]: 
 !!      < p_alpha q_beta | r_alpha s_beta > =  < p_alpha s_alpha | r_alpha q_alpha >
@@ -314,6 +320,70 @@ subroutine build_elag(ELAGd,RDMd,INTEGd,DM2_J,DM2_K,DM2_L,DM2_Jsr,DM2_Lsr)
 end subroutine build_elag
 !!***
 
+!!****f* DoNOF/build_sd_diag_elag
+!! NAME
+!! build_sd_diag_elag
+!!
+!! FUNCTION
+!!  Build the Lagrange multipliers Lambda_pp. Note that the electron rep. integrals are given in DIRAC's format
+!!
+!!  For complex orbs. with time-reversal symmetry [i.e. states p_alpha = (p_beta)* ]: 
+!!      < p_alpha q_beta | r_alpha s_beta > =  < p_alpha s_alpha | r_alpha q_alpha >
+!!             and      Lij integral (alpha beta) = Kij integral (alpha alpha)
+!!
+!! INPUTS
+!!  RDMd=Object containg all required variables whose arrays are properly updated
+!!  INTEGd=Object containg all integrals
+!!
+!! OUTPUT
+!!  ELAGd%Lambdas=Matrix build with the Lagrange multipliers Lambda_pq
+!!
+!! PARENTS
+!!  
+!! CHILDREN
+!!
+!! SOURCE
+
+subroutine build_sd_diag_elag(ELAGd,RDMd,INTEGd)
+!Arguments ------------------------------------
+!scalars
+ class(elag_t),intent(inout)::ELAGd
+ type(rdm_t),intent(inout)::RDMd
+ type(integ_t),intent(in)::INTEGd
+!Local variables ------------------------------
+!scalars
+ integer::iorb,iorb1
+!arrays
+!************************************************************************
+
+ ELAGd%Lambdas_pp=zero
+ if(ELAGd%cpx_lambdas) then
+  do iorb=1,INTEGd%NBF_jkl
+   ELAGd%Lambdas_pp(iorb)=real(INTEGd%hCORE_cmplx(iorb,iorb))                                 ! Init: Lambda_pp = hCORE_pp
+   do iorb1=1,RDMd%Nfrozen+RDMd%Npairs
+     ELAGd%Lambdas_pp(iorb)=ELAGd%Lambdas_pp(iorb)+two*real(INTEGd%ERImol_cmplx(iorb,iorb1,iorb,iorb1)) & ! iorb->iorb, iorb1->iorb1
+     &                     -real(INTEGd%ERImol_cmplx(iorb,iorb1,iorb1,iorb))                              ! iorb->iorb1, iorb1->iorb
+   enddo 
+  enddo 
+ else
+  do iorb=1,INTEGd%NBF_jkl
+   ELAGd%Lambdas_pp(iorb)=INTEGd%hCORE(iorb,iorb)                                             ! Init: Lambda_pp = hCORE_pp
+   do iorb1=1,RDMd%Nfrozen+RDMd%Npairs
+     ELAGd%Lambdas_pp(iorb)=ELAGd%Lambdas_pp(iorb)+two*INTEGd%ERImol(iorb,iorb1,iorb,iorb1) & ! iorb->iorb, iorb1->iorb1
+     &                     -INTEGd%ERImol(iorb,iorb1,iorb1,iorb)                              ! iorb->iorb1, iorb1->iorb
+   enddo 
+  enddo 
+ endif
+
+end subroutine build_sd_diag_elag
+!!***
+
+!!****f* DoNOF/diag_lambda_ekt
+!! NAME
+!! diag_lambda_ekt
+!!
+!! FUNCTION
+
 !!****f* DoNOF/diag_lambda_ekt
 !! NAME
 !! diag_lambda_ekt
@@ -375,8 +445,8 @@ subroutine diag_lambda_ekt(ELAGd,RDMd,INTEGd,NO_COEF,NO_COEF_cmplx,ekt)
   do iorb=1,RDMd%NBF_tot
    do iorb1=1,RDMd%NBF_tot
     if(iorb<=RDMd%NBF_occ.and.iorb1<=RDMd%NBF_occ) then
-     sqrt_occ_iorb =dsqrt(RDMd%occ(iorb))
-     sqrt_occ_iorb1=dsqrt(RDMd%occ(iorb1))
+     sqrt_occ_iorb =dsqrt(abs(RDMd%occ(iorb)))
+     sqrt_occ_iorb1=dsqrt(abs(RDMd%occ(iorb1)))
      if((RDMd%occ(iorb)>tol8).and.(RDMd%occ(iorb1)>tol8)) then
       if(ELAGd%cpx_lambdas) then
        Eigvec_cmplx(iorb,iorb1)=Eigvec_cmplx(iorb,iorb1)/(sqrt_occ_iorb*sqrt_occ_iorb1)
@@ -525,7 +595,7 @@ subroutine dyson_orbs(RDMd,INTEGd,Eigvec,Eigvec_cmplx,NO_COEF,NO_COEF_cmplx)
     DYSON_COEF_cmplx(iorb,iorb1)=complex_zero
     do iorb2=1,RDMd%NBF_occ
      DYSON_COEF_cmplx(iorb,iorb1)=DYSON_COEF_cmplx(iorb,iorb1)+&
-     & dsqrt(RDMd%occ(iorb2))*NO_COEF_cmplx(iorb,iorb2)*Eigvec_cmplx(iorb2,iorb1)
+     & dsqrt(abs(RDMd%occ(iorb2)))*NO_COEF_cmplx(iorb,iorb2)*Eigvec_cmplx(iorb2,iorb1)
     enddo
    enddo
   enddo
@@ -557,7 +627,7 @@ subroutine dyson_orbs(RDMd,INTEGd,Eigvec,Eigvec_cmplx,NO_COEF,NO_COEF_cmplx)
     DYSON_COEF(iorb,iorb1)=zero
     do iorb2=1,RDMd%NBF_occ
      DYSON_COEF(iorb,iorb1)=DYSON_COEF(iorb,iorb1)+&
-     & dsqrt(RDMd%occ(iorb2))*NO_COEF(iorb,iorb2)*Eigvec(iorb2,iorb1)
+     & dsqrt(abs(RDMd%occ(iorb2)))*NO_COEF(iorb,iorb2)*Eigvec(iorb2,iorb1)
     enddo
    enddo
   enddo 
@@ -572,7 +642,7 @@ subroutine dyson_orbs(RDMd,INTEGd,Eigvec,Eigvec_cmplx,NO_COEF,NO_COEF_cmplx)
   ! Normalized DYSON_COEF
   do iorb=1,RDMd%NBF_occ
    do iorb1=1,RDMd%NBF_tot
-    DYSON_COEF(iorb1,iorb)=DYSON_COEF(iorb1,iorb)/dsqrt(DYSON_occ(iorb))
+    DYSON_COEF(iorb1,iorb)=DYSON_COEF(iorb1,iorb)/dsqrt(abs(DYSON_occ(iorb)))
    enddo
   enddo
   ! Print DYSON_COEF
