@@ -100,6 +100,12 @@ subroutine opt_occ(iter,imethod,keep_occs,RDMd,Vnn,Energy,hCORE,ERI_J,ERI_K,ERI_
   endif
  endif
 
+ if(RDMd%INOF<0) then
+  write(msg,'(a)') 'Error: for pCCD we should not enter m_optocc module.'
+  call write_output(msg)
+  error stop
+ endif
+
  ! Check if the current GAMMAs already solve the problem. Is it converged? 
  if(cpx_mos) then
   call calc_E_occ_cmplx(RDMd,GAMMAs,Energy,hCORE_cmplx,ERI_J_cmplx,ERI_K_cmplx,ERI_L_cmplx)
@@ -127,7 +133,7 @@ subroutine opt_occ(iter,imethod,keep_occs,RDMd,Vnn,Energy,hCORE,ERI_J,ERI_K,ERI_
  icall=0
  if((.not.conveg).and.(.not.keep_occs)) then 
 !-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --       
-  if(imethod==1.and.RDMd%INOF>-1) then ! L-BFGS and not pCCD
+  if(imethod==1) then ! L-BFGS
    write(msg,'(a)') 'Calling L-BFGS to optimize occ. numbers'
    call write_output(msg)
    Nwork=RDMd%Ngammas*(2*msave+1)+2*msave
