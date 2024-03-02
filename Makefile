@@ -8,6 +8,7 @@ all:
 	gfortran -Wall -c m_rdmd.F90
 	gfortran -Wall -c m_elag.F90
 	gfortran -Wall -c m_diagf.F90
+	gfortran -Wall -c m_hessian.F90
 	gfortran -Wall -c m_gammatodm2.F90
 	gfortran -Wall -c m_e_grad_occ.F90
 	gfortran -Wall -c m_e_grad_occ_cpx.F90
