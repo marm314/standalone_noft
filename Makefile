@@ -6,6 +6,7 @@ all:
 	gfortran -Wall -c m_lbfgs_intern.F
 	gfortran -Wall -c m_integd.F90
 	gfortran -Wall -c m_rdmd.F90
+	gfortran -Wall -c m_anti2unit.F90
 	gfortran -Wall -c m_elag.F90
 	gfortran -Wall -c m_diagf.F90
 	gfortran -Wall -c m_hessian.F90
