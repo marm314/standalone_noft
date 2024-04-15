@@ -44,10 +44,9 @@ contains
 !!
 !! SOURCE
 
-subroutine anti_2_unitary(NBF_tot,complex_orbs,X_mat,U_mat,X_mat_cmplx,U_mat_cmplx) 
+subroutine anti_2_unitary(NBF_tot,X_mat,U_mat,X_mat_cmplx,U_mat_cmplx) 
 !Arguments ------------------------------------
 !scalars
- logical,intent(in)::complex_orbs
  integer,intent(in)::NBF_tot
 !arrays
  real(dp),optional,dimension(NBF_tot,NBF_tot),intent(inout)::U_mat,X_mat
@@ -66,7 +65,7 @@ subroutine anti_2_unitary(NBF_tot,complex_orbs,X_mat,U_mat,X_mat_cmplx,U_mat_cmp
  allocate(Tmp_mat(NBF_tot,NBF_tot),Tmp_mat2(NBF_tot,NBF_tot),Eigvec_cmplx(NBF_tot,NBF_tot))
 
  ! Build iX (Hermitian)
- if(complex_orbs) then
+ if(present(X_mat_cmplx).and.present(U_mat_cmplx)) then
   Eigvec_cmplx(:,:)=im*X_mat_cmplx(:,:)
   U_mat_cmplx=complex_zero 
  else
@@ -89,12 +88,12 @@ subroutine anti_2_unitary(NBF_tot,complex_orbs,X_mat,U_mat,X_mat_cmplx,U_mat_cmp
  ! exp(X) = exp(V (-i delta) V^dagger) = V exp(-i delta) V^dagger
  Tmp_mat=complex_zero
  do iorb=1,NBF_tot
-  Tmp_mat(iorb,iorb)=-im*delta_diag(iorb)
+  Tmp_mat(iorb,iorb)=exp(-im*delta_diag(iorb))
  enddo
- Tmp_mat2=matmul(conjg(transpose(Eigvec_cmplx)),matmul(Tmp_mat,Eigvec_cmplx))
+ Tmp_mat2=matmul(matmul(Eigvec_cmplx,Tmp_mat),conjg(transpose(Eigvec_cmplx)))
 
  ! Set U = V exp(-i delta) V^dagger 
- if(complex_orbs) then
+ if(present(X_mat_cmplx).and.present(U_mat_cmplx)) then
   U_mat_cmplx(:,:)=Tmp_mat2(:,:)
  else
   U_mat(:,:)=real(Tmp_mat2(:,:))
