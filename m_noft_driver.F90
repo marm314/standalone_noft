@@ -146,7 +146,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
 
  diagLpL=.true.; restart_param=.false.; ifcidump=0; keep_orbs=.false.; keep_occs=.false.; cpx_mos=.false.;
  irs_noft=0; all_ERI_in=.false.; hessian_in=.false.;
-
+    
  ! Initialize output
  call gitversion(sha_git) 
  call init_output(ofile_name)
@@ -156,13 +156,20 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
   if(fcidump) ifcidump=1
  endif
  
-! Check whether to compute the Hessian matrix (for Newton Rapson or to check the eigenvalues)
+! Check whether to compute the Hessian matrix (for Quadratic Convergence or to check the eigenvalues)
  if(present(hessian)) hessian_in=hessian
  if(imethorb/=1) hessian_in=.true.
 
- ! Check whether to print a FCIDUMP file and the sw-RDMs
+ ! Check whether to use a range-sep. calculation
  if(present(irange_sep)) then 
   if(irange_sep/=0) irs_noft=irange_sep
+ endif
+
+ ! No Hessian available for range-sep
+ if(irs_noft/=0 .and. hessian_in) then
+  write(msg,'(a)') 'Warning! The Hessian of the range-sep is not available. QC not available'
+  call write_output(msg)
+  stop
  endif
 
  ! Check if we use complex orbs
@@ -210,7 +217,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
 & Nbeta_elect_in,Nalpha_elect_in,irs_noft)
  endif
  
- if(present(lowmemERI) .and. (.not.hessian_in .and. imethorb/=1)) then ! The Hessian for Newton Rapson method needs all integrals
+ if(present(lowmemERI) .and. (.not.hessian_in .and. imethorb/=1)) then ! The Hessian for Quadratic Convergence method needs all integrals
   call integ_init(INTEGd,RDMd%NBF_tot,RDMd%NBF_occ,AOverlap_in,cpx_mos,irs_noft,lowmemERI=lowmemERI)
  else
   call integ_init(INTEGd,RDMd%NBF_tot,RDMd%NBF_occ,AOverlap_in,cpx_mos,irs_noft)
@@ -725,7 +732,7 @@ subroutine echo_input(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in
   write(msg,'(a,i12)') ' Numb. of iter used in DIIS        ',ndiis
   call write_output(msg)
  else
-  write(msg,'(a,i12)') ' New. Rap. method used in orb opt. ',imethorb
+  write(msg,'(a,i12)') ' QC method used in orb opt.        ',imethorb
   call write_output(msg)
   write(msg,'(a,e10.3)') ' Tolerance gradient convergence      ',ten**(-itolLambda)
   call write_output(msg)
