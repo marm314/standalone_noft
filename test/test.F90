@@ -82,6 +82,7 @@ program noft_hubbard
  Nfrozen=0
  Nbeta_elect=Nalpha_elect
  Npairs=(Nbeta_elect+Nalpha_elect)/2
+ Ncoupled=(NBF_tot/Npairs)-1
  ofile_name='hubbard.noft'
  ! Allocate arrays
  allocate(Occ(NBF_tot),Work(1))
@@ -167,7 +168,9 @@ subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,Occ,NO_COEF,hCORE,ERImol)
  real(dp),optional,dimension(NBF_tot,NBF_jkl,NBF_jkl,NBF_jkl),intent(inout)::ERImol
  real(dp),optional,dimension(NBF_tot,NBF_tot),intent(in)::NO_COEF
  real(dp),allocatable,dimension(:,:)::TMP_hCORE
+ logical::nbf_U_found
  integer::isite,isite1
+ integer::NBF_tot_,nbf_unit=25
 
  !write(*,*) ' Starting transformation of hCORE and ERI integrals'
  ! Compute hCORE (initially SITE_hCORE, in the end hCORE)
@@ -186,7 +189,15 @@ subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,Occ,NO_COEF,hCORE,ERImol)
 
  ! Compute ERImol (initially SITE_ERI, in the end ERImol)
  ERImol=zero
- do isite=1,NBF_tot
+ NBF_tot_=NBF_tot
+ nbf_U_found=.false.
+ inquire(file='NBF_U',exist=nbf_U_found)
+ if(nbf_U_found) then
+  open(newunit=nbf_unit,file='NBF_U',status='old',form='formatted')
+  read(nbf_unit,*) NBF_tot_
+  close(nbf_unit)
+ endif
+ do isite=1,NBF_tot_
   ERImol(isite,isite,isite,isite)=U
  enddo
  call transformERI(NBF_tot,NO_COEF,ERImol) ! Site -> Nat. orbs.
