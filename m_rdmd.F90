@@ -36,7 +36,7 @@ module m_rdmd
   logical::z_amplitudes_nread=.true. ! Are z-amplitudes read from previous calc.?
   integer::irange_sep=0            ! rs-NOFT calcs. 0=no, 1=intra, 2=ex_corr
   integer::INOF=8                  ! Functional to use (5-> PNOF5, 7-> PNOF7, 8-> GNOF, etc)
-  integer::Ista=0                  ! Use PNOF7s or only static/non-dyn part of GNOF with Ista=1
+  integer::Ista=0                  ! Use PNOF7s or only static/non-dyn part of GNOF with Ista=1 or 3
   integer::Nfrozen                 ! Number of frozen orbitals in the NOFT calc.
   integer::Nbeta_elect             ! Number of orbitals containing beta electrons
   integer::Nalpha_elect            ! Number of orbitals containing alpha electrons
@@ -50,6 +50,7 @@ module m_rdmd
   integer::Ngammas                 ! Number of gammas (independet variables used in occ optimization procedure)
   integer::Namplitudes             ! Number of t and z pCCD amplitudes
   real(dp)::Lpower=0.53d0          ! Power functional exponent
+  real(dp)::PNOF7sup=-1.0d0        ! Coef. PNOF7 sup. that goes in front of L integrals
   real(dp)::Hcut=0.02d0*dsqrt(two) ! Hcut parameter defined in GNOF to determine the Ecorr type (i.e. dyn or nondyn)
 ! arrays 
   real(dp),allocatable,dimension(:)::occ,chempot_orb,occ_dyn
@@ -122,13 +123,14 @@ CONTAINS  !=====================================================================
 !! SOURCE
 
 subroutine rdm_init(RDMd,INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,&
-&  Ncoupled,Nbeta_elect,Nalpha_elect,irs_noft,Lpower)
+&  Ncoupled,Nbeta_elect,Nalpha_elect,irs_noft,Lpower,PNOF7sup)
 !Arguments ------------------------------------
 !scalars
  integer,intent(in)::INOF,Ista,irs_noft
  integer,intent(in)::NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled
  integer,intent(in)::Nbeta_elect,Nalpha_elect
  real(dp),optional,intent(in)::Lpower
+ real(dp),optional,intent(in)::PNOF7sup
  type(rdm_t),intent(inout)::RDMd
 !Local variables ------------------------------
 !scalars
@@ -142,6 +144,11 @@ subroutine rdm_init(RDMd,INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,&
  if(RDMd%INOF==101) then
   if(present(Lpower)) then
    RDMd%Lpower=Lpower
+  endif
+ endif
+ if(RDMd%INOF==70) then
+  if(present(PNOF7sup)) then
+   RDMd%PNOF7sup=PNOF7sup
   endif
  endif
  RDMd%Ista=Ista
@@ -596,7 +603,7 @@ subroutine print_orb_coefs(RDMd,name_file,COEF,COEF_cmplx)
 !scalars
  class(rdm_t),intent(in)::RDMd
 !arrays
- character(len=10)::name_file 
+ character(len=20)::name_file 
  real(dp),optional,dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(in)::COEF
  complex(dp),optional,dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(in)::COEF_cmplx
 !Local variables ------------------------------
@@ -651,11 +658,12 @@ end subroutine print_orb_coefs
 !!
 !! SOURCE
 
-subroutine print_orb_coefs_bin(RDMd,COEF,COEF_cmplx)
+subroutine print_orb_coefs_bin(RDMd,name_file,COEF,COEF_cmplx)
 !Arguments ------------------------------------
 !scalars
  class(rdm_t),intent(in)::RDMd
 !arrays
+ character(len=20)::name_file
  real(dp),optional,dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(in)::COEF
  complex(dp),optional,dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(in)::COEF_cmplx
 !Local variables ------------------------------
@@ -665,10 +673,9 @@ subroutine print_orb_coefs_bin(RDMd,COEF,COEF_cmplx)
 !arrays
 
 !************************************************************************
- 
  if(present(COEF_cmplx)) cpx_mos=.true.
  ! Print the orb. coefs
- open(unit=iunit,form='unformatted',file='NO_COEF_BIN')
+ open(unit=iunit,form='unformatted',file=name_file)
  do iorb=1,RDMd%NBF_tot
   do iorb1=1,RDMd%NBF_tot
    if(cpx_mos) then
@@ -679,9 +686,9 @@ subroutine print_orb_coefs_bin(RDMd,COEF,COEF_cmplx)
   enddo
  enddo
  if(cpx_mos) then
-  write(iunit) 0,0,zero
- else
   write(iunit) 0,0,complex_zero
+ else
+  write(iunit) 0,0,zero
  endif
  close(iunit)
 
