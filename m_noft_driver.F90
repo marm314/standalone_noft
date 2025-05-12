@@ -33,7 +33,7 @@ module m_noft_driver
 
  implicit none
 
- private :: read_restart,echo_input,occtogamma
+ private :: read_restart,echo_input,occtogamma,build_real_nos
 !!***
 
  public :: run_noft,gram_schmidt
@@ -90,8 +90,8 @@ contains
 subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
 &  Ncoupled_in,Nbeta_elect_in,Nalpha_elect_in,imethocc,imethorb,itermax,iprintdmn,iprintswdmn,&
 &  iprintints,itolLambda,ndiis,Enof,tolE_in,Vnn,AOverlap_in,occ_inout,mo_ints,ofile_name,NO_COEF,NO_COEF_cmplx,&
-&  lowmemERI,restart,ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,iNOTupdateocc,iNOTupdateORB,Lpower,fcidump,irange_sep,& ! Optional
-&  hessian)                                                                                                            ! Optional
+&  lowmemERI,restart,ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,iNOTupdateocc,iNOTupdateORB,PNOF7sup,Lpower,fcidump,&   ! Optional
+&  irange_sep,hessian)                                                                                                 ! Optional
 !Arguments ------------------------------------
 !scalars
  logical,optional,intent(in)::restart,lowmemERI,fcidump,hessian
@@ -100,24 +100,31 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  integer,intent(in)::NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,Ncoupled_in,itolLambda,ndiis  
  integer,intent(in)::Nbeta_elect_in,Nalpha_elect_in
  real(dp),optional,intent(in)::Lpower
+ real(dp),optional,intent(in)::PNOF7sup
  real(dp),intent(in)::Vnn,tolE_in
  real(dp),intent(inout)::Enof
  interface
-  subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,Occ,NO_COEF,hCORE,ERImol,ERImolJsr,ERImolLsr,&
-  & NO_COEF_cmplx,hCORE_cmplx,ERImol_cmplx,all_ERIs)
+  subroutine mo_ints(nbf,nstate_occ,nstate_kji,Occ,DM2_JK,NO_COEF,hCORE,ERImol,ERImolJsr,ERImolLsr,&
+     &             NO_COEF_cmplx,hCORE_cmplx,ERImol_cmplx,ERImolJsr_cmplx,ERImolLsr_cmplx,all_ERIs,&
+     &             Edft_xc,do_xc_dft)
   use m_definitions
   implicit none
-  logical,optional,intent(in)::all_ERIs
-  integer,intent(in)::NBF_tot,NBF_occ,NBF_jkl
-  real(dp),intent(in)::Occ(NBF_occ)
-  real(dp),optional,intent(in)::NO_COEF(NBF_tot,NBF_tot)
-  real(dp),optional,intent(inout)::hCORE(NBF_tot,NBF_tot)
-  real(dp),optional,intent(inout)::ERImol(NBF_tot,NBF_jkl,NBF_jkl,NBF_jkl)
-  real(dp),optional,intent(inout)::ERImolJsr(NBF_tot,NBF_jkl,NBF_jkl)
-  real(dp),optional,intent(inout)::ERImolLsr(NBF_tot,NBF_jkl,NBF_jkl)
-  complex(dp),optional,intent(in)::NO_COEF_cmplx(NBF_tot,NBF_tot)
-  complex(dp),optional,intent(inout)::hCORE_cmplx(NBF_tot,NBF_tot)
-  complex(dp),optional,intent(inout)::ERImol_cmplx(NBF_tot,NBF_jkl,NBF_jkl,NBF_jkl)
+
+  logical,optional,intent(in)     :: all_ERIs,do_xc_dft
+  integer,intent(in)              :: nbf,nstate_occ,nstate_kji
+  real(dp),intent(in)             :: Occ(nstate_occ)
+  real(dp),optional,intent(inout) :: Edft_xc
+  real(dp),optional,intent(in)    :: DM2_JK(2,nstate_occ,nstate_occ)
+  real(dp),optional,intent(in)    :: NO_COEF(nbf,nbf)
+  real(dp),optional,intent(inout) :: hCORE(nbf,nbf)
+  real(dp),optional,intent(inout) :: ERImol(nbf,nstate_kji,nstate_kji,nstate_kji)
+  real(dp),optional,intent(inout) :: ERImolJsr(nbf,nstate_kji,nstate_kji)
+  real(dp),optional,intent(inout) :: ERImolLsr(nbf,nstate_kji,nstate_kji)
+  complex(dp),optional,intent(in)    :: NO_COEF_cmplx(nbf,nbf)
+  complex(dp),optional,intent(inout) :: hCORE_cmplx(nbf,nbf)
+  complex(dp),optional,intent(inout) :: ERImol_cmplx(nbf,nstate_kji,nstate_kji,nstate_kji)
+  complex(dp),optional,intent(inout) :: ERImolJsr_cmplx(nbf,nstate_kji,nstate_kji)
+  complex(dp),optional,intent(inout) :: ERImolLsr_cmplx(nbf,nstate_kji,nstate_kji)
   end subroutine mo_ints
  end interface
 !arrays
@@ -129,24 +136,26 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
 !Local variables ------------------------------
 !scalars
  logical::ekt,diagLpL,restart_param,keep_occs,keep_orbs,cpx_mos,all_ERI_in,hessian_in
+ logical::file_exists,do_xc_dft
  integer::iorb,iter,ifcidump,irs_noft
- integer::iorbp,iorbq
- real(dp)::Energy,Energy_old,Vee,hONEbody,chempot_val,maxdiff_lambda
+ integer::iorbp,iorbq,iunit
+ real(dp)::Energy,Energy_old,Vee,hONEbody,chempot_val,maxdiff_lambda,Edft_xc
  type(rdm_t),target::RDMd
  type(integ_t),target::INTEGd
  type(elag_t),target::ELAGd
  type(hessian_t),target::HESSIANd
 !arrays
- real(dp),allocatable,dimension(:,:)::DM1
+ real(dp),allocatable,dimension(:,:)::DM1,NO_COEF_tmp
+ real(dp),allocatable,dimension(:,:,:)::DM2_JK
  real(dp),allocatable,dimension(:,:,:,:)::DM2
- character(len=10)::coef_file
+ character(len=20)::coef_file
  character(len=100)::sha_git
  character(len=200)::msg
 !************************************************************************
 
  diagLpL=.true.; restart_param=.false.; ifcidump=0; keep_orbs=.false.; keep_occs=.false.; cpx_mos=.false.;
- irs_noft=0; all_ERI_in=.false.; hessian_in=.false.;
-
+ irs_noft=0; all_ERI_in=.false.; hessian_in=.false.; file_exists=.false.;
+    
  ! Initialize output
  call gitversion(sha_git) 
  call init_output(ofile_name)
@@ -156,13 +165,20 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
   if(fcidump) ifcidump=1
  endif
  
-! Check whether to compute the Hessian matrix (for Newton Rapson or to check the eigenvalues)
+! Check whether to compute the Hessian matrix (for Quadratic Convergence or to check the eigenvalues)
  if(present(hessian)) hessian_in=hessian
  if(imethorb/=1) hessian_in=.true.
 
- ! Check whether to print a FCIDUMP file and the sw-RDMs
+ ! Check whether to use a range-sep. calculation
  if(present(irange_sep)) then 
   if(irange_sep/=0) irs_noft=irange_sep
+ endif
+
+ ! No Hessian available for range-sep
+ if(irs_noft/=0 .and. hessian_in) then
+  write(msg,'(a)') 'Warning! The Hessian of the range-sep is not available. QC not available'
+  call write_output(msg)
+  stop
  endif
 
  ! Check if we use complex orbs
@@ -205,12 +221,20 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
    call rdm_init(RDMd,INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,Ncoupled_in,&
 &  Nbeta_elect_in,Nalpha_elect_in,irs_noft)
   endif
+ else if(INOF_in==70) then
+  if(present(PNOF7sup)) then
+   call rdm_init(RDMd,INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,Ncoupled_in,&
+&  Nbeta_elect_in,Nalpha_elect_in,irs_noft,PNOF7sup=PNOF7sup)
+  else
+   call rdm_init(RDMd,INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,Ncoupled_in,&
+&  Nbeta_elect_in,Nalpha_elect_in,irs_noft)
+  endif
  else
   call rdm_init(RDMd,INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,Ncoupled_in,&
 & Nbeta_elect_in,Nalpha_elect_in,irs_noft)
  endif
  
- if(present(lowmemERI) .and. (.not.hessian_in .and. imethorb/=1)) then ! The Hessian for Newton Rapson method needs all integrals
+ if(present(lowmemERI) .and. (.not.hessian_in .and. imethorb/=1)) then ! The Hessian for Quadratic Convergence method needs all integrals
   call integ_init(INTEGd,RDMd%NBF_tot,RDMd%NBF_occ,AOverlap_in,cpx_mos,irs_noft,lowmemERI=lowmemERI)
  else
   call integ_init(INTEGd,RDMd%NBF_tot,RDMd%NBF_occ,AOverlap_in,cpx_mos,irs_noft)
@@ -247,14 +271,22 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  call write_output(msg)
  iter=-1
  if(cpx_mos) then
-  call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF_cmplx=NO_COEF_cmplx, &
-  & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx)
+  if(INTEGd%irange_sep/=0) then
+   RDMd%occ(1:RDMd%Nfrozen+RDMd%Npairs)=ONE
+   call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF_cmplx=NO_COEF_cmplx, &
+   & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx,ERImolJsr_cmplx=INTEGd%ERImolJsr_cmplx,&
+   & ERImolLsr_cmplx=INTEGd%ERImolLsr_cmplx)
+  else
+   call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF_cmplx=NO_COEF_cmplx, &
+   & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx)
+  endif
   call INTEGd%eritoeriJKL(RDMd%NBF_occ)
   if(RDMd%INOF<0) then ! pCCD
    call calc_tz_pCCD_amplitudes(ELAGd,RDMd,INTEGd,Vnn,Energy,iter,imethocc,keep_occs)
   else ! NOFT
    call opt_occ(iter,imethocc,keep_occs,RDMd,Vnn,Energy,hCORE_cmplx=INTEGd%hCORE_cmplx,ERI_J_cmplx=INTEGd%ERI_J_cmplx, &
-  &  ERI_K_cmplx=INTEGd%ERI_K_cmplx,ERI_L_cmplx=INTEGd%ERI_L_cmplx) ! Also iter=iter+1
+  &  ERI_K_cmplx=INTEGd%ERI_K_cmplx,ERI_L_cmplx=INTEGd%ERI_L_cmplx,ERI_Jsr_cmplx=INTEGd%ERI_Jsr_cmplx,&
+  &  ERI_Lsr_cmplx=INTEGd%ERI_Lsr_cmplx) ! Also iter=iter+1
   endif
  else
   if(INTEGd%irange_sep/=0) then
@@ -326,6 +358,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  endif
 
  ! Orb. and occ. optimization
+ coef_file='NO_COEF_BIN'
  do
   ! Orb. optimization
   if(.not.keep_orbs) then
@@ -342,9 +375,9 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
    endif
   endif
   if(cpx_mos) then
-   call RDMd%print_orbs_bin(COEF_cmplx=NO_COEF_cmplx)
+   call RDMd%print_orbs_bin(coef_file,COEF_cmplx=NO_COEF_cmplx)
   else
-   call RDMd%print_orbs_bin(COEF=NO_COEF)
+   call RDMd%print_orbs_bin(coef_file,COEF=NO_COEF)
   endif
 
   ! occ. optimization
@@ -353,7 +386,8 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
     call calc_tz_pCCD_amplitudes(ELAGd,RDMd,INTEGd,Vnn,Energy,iter,imethocc,keep_occs)
    else ! NOFT
     call opt_occ(iter,imethocc,keep_occs,RDMd,Vnn,Energy,hCORE_cmplx=INTEGd%hCORE_cmplx,ERI_J_cmplx=INTEGd%ERI_J_cmplx, &
-   &  ERI_K_cmplx=INTEGd%ERI_K_cmplx,ERI_L_cmplx=INTEGd%ERI_L_cmplx) ! Also iter=iter+1
+   &  ERI_K_cmplx=INTEGd%ERI_K_cmplx,ERI_L_cmplx=INTEGd%ERI_L_cmplx,ERI_Jsr_cmplx=INTEGd%ERI_Jsr_cmplx, &
+   &  ERI_Lsr_cmplx=INTEGd%ERI_Lsr_cmplx) ! Also iter=iter+1
    endif
   else
    if(RDMd%INOF<0) then ! pCCD
@@ -376,7 +410,28 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
   ! Check maximum number of iterations
   if(iter>=itermax) exit
 
+  ! Check stop file
+  inquire(file='STOP_NOFT_SCF',exist=file_exists)
+  if(file_exists) exit
+
  enddo
+
+ ! Compute rs-NOFT Exc_DFT for fixed occ numbers and orbitals (i.e. density and on-top pair density)
+ if(INTEGd%irange_sep/=0) then
+   do_xc_dft=.true. 
+   allocate(DM2_JK(2,RDMd%NBF_occ,RDMd%NBF_occ))
+   call dm2_JK_3d(RDMd%NBF_occ,RDMd%DM2_J,RDMd%DM2_K,RDMd%DM2_L,RDMd%DM2_iiii,DM2_JK)
+   if(cpx_mos) then
+    call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,DM2_JK=DM2_JK,NO_COEF_cmplx=NO_COEF_cmplx,               &
+    & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx,ERImolJsr_cmplx=INTEGd%ERImolJsr_cmplx, &
+    & ERImolLsr_cmplx=INTEGd%ERImolLsr_cmplx,all_ERIs=all_ERI_in,Edft_xc=Edft_xc,do_xc_dft=do_xc_dft)
+   else
+    call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,DM2_JK=DM2_JK,NO_COEF=NO_COEF,hCORE=INTEGd%hCORE,  &
+    & ERImol=INTEGd%ERImol,ERImolJsr=INTEGd%ERImolJsr,ERImolLsr=INTEGd%ERImolLsr,all_ERIs=all_ERI_in,Edft_xc=Edft_xc, &
+    & do_xc_dft=do_xc_dft)
+   endif
+   deallocate(DM2_JK)
+ endif
 
  ! Build and diagonalize the Hessian (except for range-sep)
  if(hessian_in .and. irs_noft==0) then
@@ -405,6 +460,22 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  if(RDMd%INOF>-1) then
   if(cpx_mos) then
    call s2_calc(RDMd,INTEGd,NO_COEF_cmplx=NO_COEF_cmplx)
+   !allocate(NO_COEF_tmp(RDMd%NBF_tot,RDMd%NBF_tot))
+   !NO_COEF_tmp=zero
+   !! Prepare real NOs
+   !call build_real_nos(RDMd,INTEGd,NO_COEF_tmp,NO_COEF_cmplx)
+   !! Print real NOs
+   !iunit=911
+   !coef_file='NO_COEF_BIN_REAL'
+   !open(unit=iunit,form='unformatted',file=coef_file)
+   !do iorbp=1,RDMd%NBF_tot
+   ! do iorbq=1,RDMd%NBF_tot
+   !  write(iunit) iorbp,iorbq,NO_COEF_tmp(iorbp,iorbq)
+   ! enddo
+   !enddo
+   !write(iunit) 0,0,zero
+   !close(iunit)
+   !deallocate(NO_COEF_tmp)
   else
    call s2_calc(RDMd,INTEGd,NO_COEF=NO_COEF)
   endif
@@ -461,20 +532,24 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  occ_inout(1:RDMd%NBF_occ)=RDMd%occ(1:RDMd%NBF_occ)
 
  ! Print optimized nat. orb. coef.
- coef_file='NO_COEF'
  if(cpx_mos) then
+  coef_file='NO_COEF'
   call RDMd%print_orbs(coef_file,COEF_cmplx=NO_COEF_cmplx)
-  call RDMd%print_orbs_bin(COEF_cmplx=NO_COEF_cmplx)
+  coef_file='NO_COEF_BIN'
+  call RDMd%print_orbs_bin(coef_file,COEF_cmplx=NO_COEF_cmplx)
  else
+  coef_file='NO_COEF'
   call RDMd%print_orbs(coef_file,COEF=NO_COEF)
-  call RDMd%print_orbs_bin(COEF=NO_COEF)
+  coef_file='NO_COEF_BIN'
+  call RDMd%print_orbs_bin(coef_file,COEF=NO_COEF)
  endif
 
  ! Calculate the chem. pot. = d E / d occ if it is not rs-NOFT and pCCD (resets occ in [0:1])
  if(irs_noft==0 .and. RDMd%INOF>-1) then
   if(cpx_mos) then
    call occ_chempot(RDMd,hCORE_cmplx=INTEGd%hCORE_cmplx,ERI_J_cmplx=INTEGd%ERI_J_cmplx,&
-   & ERI_K_cmplx=INTEGd%ERI_K_cmplx,ERI_L_cmplx=INTEGd%ERI_L_cmplx)
+   & ERI_K_cmplx=INTEGd%ERI_K_cmplx,ERI_L_cmplx=INTEGd%ERI_L_cmplx,ERI_Jsr_cmplx=INTEGd%ERI_Jsr_cmplx,&
+   & ERI_Lsr_cmplx=INTEGd%ERI_Lsr_cmplx)
   else 
    call occ_chempot(RDMd,hCORE=INTEGd%hCORE,ERI_J=INTEGd%ERI_J,ERI_K=INTEGd%ERI_K,ERI_L=INTEGd%ERI_L,&
     ERI_Jsr=INTEGd%ERI_Jsr,ERI_Lsr=INTEGd%ERI_Lsr)
@@ -489,7 +564,7 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
   enddo
   write(msg,'(a)') ' '
   call write_output(msg)
-  write(msg,'(a,f10.5,a,f10.5,a)') 'Chem. potential ',chempot_val,' (a.u.) ',chempot_val*Ha_eV,' (eV), and per orbital (a.u.)'
+  write(msg,'(a,f10.5,a,e12.5,a)') 'Chem. potential ',chempot_val,' (a.u.) ',chempot_val*Ha_eV,' (eV), and per orbital (a.u.)'
   call write_output(msg)
   do iorb=1,(RDMd%NBF_occ/10)*10,10
    write(msg,'(f12.6,9f11.6)') RDMd%chempot_orb(iorb:iorb+9)
@@ -633,6 +708,10 @@ subroutine echo_input(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in
   write(msg,'(a,i12)') ' GNOF-stat version selected Istat  ',Ista_in
   call write_output(msg)
  endif
+ if(INOF_in==8 .and. Ista_in==3) then
+  write(msg,'(a,i12)') ' GNOFs version selected Istat      ',Ista_in
+  call write_output(msg)
+ endif
  if(INOF_in==0) then
   write(msg,'(a)') ' Using Hartree-Fock approximation'
   call write_output(msg)
@@ -696,6 +775,11 @@ subroutine echo_input(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in
   call write_output(msg)
   write(msg,'(a)') ' M. Piris, Phys. Rev. Lett., 127, 233001 (2021)'
   call write_output(msg)
+ elseif(INOF_in==70) then
+  write(msg,'(a)') ' Using PNOF7_SUP approximation'
+  call write_output(msg)
+  write(msg,'(a,i12)') ' PNOF7_SUP version selected Istat  ',Ista_in
+  call write_output(msg)
  else
   ! Nth
  endif
@@ -725,7 +809,7 @@ subroutine echo_input(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in
   write(msg,'(a,i12)') ' Numb. of iter used in DIIS        ',ndiis
   call write_output(msg)
  else
-  write(msg,'(a,i12)') ' New. Rap. method used in orb opt. ',imethorb
+  write(msg,'(a,i12)') ' QC method used in orb opt.        ',imethorb
   call write_output(msg)
   write(msg,'(a,e10.3)') ' Tolerance gradient convergence      ',ten**(-itolLambda)
   call write_output(msg)
@@ -1282,6 +1366,110 @@ subroutine gram_schmidt(NBF_tot,AOverlap,NO_COEF,NO_COEF_cmplx)
   deallocate(S_NO_cmplx,NO_COEF_cmplx_new)
  endif
 end subroutine gram_schmidt
+!!***
+
+!!***
+!!****f* DoNOF/build_real_nos
+!! NAME
+!!  build_real_nos 
+!!
+!! FUNCTION
+!!  Build real natural orbitals from the complex ones, occ. numbers, and overlap matrix.
+!!
+!! INPUTS
+!!
+!! OUTPUT
+!!
+!! PARENTS
+!!  
+!! CHILDREN
+!!
+!! SOURCE
+
+subroutine build_real_nos(RDMd,INTEGd,NO_COEF,NO_COEF_cmplx)
+!Arguments ------------------------------------
+!scalars
+ type(rdm_t),intent(in)::RDMd
+ type(integ_t),intent(in)::INTEGd
+!arrays
+ real(dp),dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(inout)::NO_COEF
+ complex(dp),dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(in)::NO_COEF_cmplx
+!Local variables ------------------------------
+!scalars
+ integer::iorbp,iorbq
+ integer::lwork,info
+ real(dp)::pivot
+!arrays
+ real(dp),allocatable,dimension(:)::Eigvals,Work
+ real(dp),allocatable,dimension(:,:)::Density,Eigvec,S_12,S_m12
+ complex(dp),allocatable,dimension(:,:)::Density_cmplx,Tmp_matrix_cmplx
+ character(len=200)::msg
+!************************************************************************
+
+ ! Prepare real density
+ allocate(Density(RDMd%NBF_tot,RDMd%NBF_tot))
+ allocate(Density_cmplx(RDMd%NBF_tot,RDMd%NBF_tot),Tmp_matrix_cmplx(RDMd%NBF_tot,RDMd%NBF_tot))
+ Tmp_matrix_cmplx=complex_zero
+ do iorbp=1,RDMd%NBF_occ
+  Tmp_matrix_cmplx(iorbp,iorbp)=RDMd%occ(iorbp)
+ enddo
+ Density_cmplx=matmul(matmul(NO_COEF_cmplx,Tmp_matrix_cmplx),conjg(transpose(NO_COEF_cmplx)))
+ do iorbp=1,RDMd%NBF_tot
+  do iorbq=1,RDMd%NBF_tot
+   Density(iorbp,iorbq)=real(Density_cmplx(iorbp,iorbq))
+  enddo
+ enddo
+ deallocate(Density_cmplx,Tmp_matrix_cmplx)
+
+ ! Prepare S^1/2 and S^-1/2
+ allocate(Eigvec(RDMd%NBF_tot,RDMd%NBF_tot),Eigvals(RDMd%NBF_tot),Work(1))
+ allocate(S_12(RDMd%NBF_tot,RDMd%NBF_tot))
+ allocate(S_m12(RDMd%NBF_tot,RDMd%NBF_tot))
+ Eigvec=INTEGd%Overlap
+ lwork=-1
+ call DSYEV('V','L',RDMd%NBF_tot,Eigvec,RDMd%NBF_tot,Eigvals,Work,lwork,info)
+ lwork=nint(Work(1))
+ if(info==0) then
+  deallocate(Work)
+  allocate(Work(lwork))
+  Eigvals=zero
+  call DSYEV('V','L',RDMd%NBF_tot,Eigvec,RDMd%NBF_tot,Eigvals,Work,lwork,info)
+ endif
+ S_12=zero; S_m12=zero;
+ do iorbp=1,RDMd%NBF_tot
+  S_12(iorbp,iorbp)=sqrt(Eigvals(iorbp))
+  S_m12(iorbp,iorbp)=one/sqrt(Eigvals(iorbp))
+ enddo 
+ S_12=matmul(Eigvec,matmul(S_12,transpose(Eigvec)))
+ S_m12=matmul(Eigvec,matmul(S_m12,transpose(Eigvec)))
+
+ ! diag[ S^1/2 Density S^1/2 ]
+ Density=matmul(S_12,matmul(Density,S_12))
+ Eigvals=zero
+ call DSYEV('V','L',RDMd%NBF_tot,Density,RDMd%NBF_tot,Eigvals,Work,lwork,info)
+ Eigvals(:)=two*Eigvals(:)
+ do iorbp=1,RDMd%NBF_tot
+  Eigvec(:,iorbp)=Density(:,RDMd%NBF_tot-(iorbp-1))
+  Density(iorbp,RDMd%NBF_tot)=Eigvals(RDMd%NBF_tot-(iorbp-1))
+ enddo
+ Eigvals(:)=Density(:,RDMd%NBF_tot)
+ write(msg,'(a,f10.5,a)') 'Total occ ',sum(Eigvals(:)),'. From the real density nat. orbs. '
+ call write_output(msg)
+ do iorbp=1,(RDMd%NBF_tot/10)*10,10
+  write(msg,'(f12.6,9f11.6)') Eigvals(iorbp:iorbp+9)
+  call write_output(msg)
+ enddo
+ iorbp=(RDMd%NBF_tot/10)*10+1 
+ write(msg,'(f12.6,*(f11.6))') Eigvals(iorbp:) 
+ call write_output(msg)
+
+ ! Build Coefs = S^-1/2 Eigvenvectors
+ NO_COEF=matmul(S_m12,Eigvec)
+
+ ! Deallocate arrays
+ deallocate(Eigvals,Work,S_12,S_m12,Density,Eigvec)
+
+end subroutine build_real_nos
 !!***
 
 end module m_noft_driver
