@@ -158,15 +158,27 @@ end program noft_hubbard
 !!
 !! SOURCE
 
-subroutine mo_ints(NBF_tot,NBF_occ,NBF_jkl,Occ,NO_COEF,hCORE,ERImol)
+subroutine mo_ints(NBF_tot, NBF_occ, NBF_jkl, Occ, DM2_JK, NO_COEF, hCORE, ERImol, ERImolJsr, ERImolLsr, &
+     &             NO_COEF_cmplx, hCORE_cmplx, ERImol_cmplx, ERImolJsr_cmplx, ERImolLsr_cmplx, all_ERIs, &
+     &             Edft_xc, do_xc_dft)
  use m_definitions
  use m_hubbard
  implicit none
- integer,intent(in)::NBF_tot,NBF_occ,NBF_jkl
- real(dp),dimension(NBF_occ),intent(in)::Occ
- real(dp),optional,dimension(NBF_tot,NBF_tot),intent(inout)::hCORE
- real(dp),optional,dimension(NBF_tot,NBF_jkl,NBF_jkl,NBF_jkl),intent(inout)::ERImol
- real(dp),optional,dimension(NBF_tot,NBF_tot),intent(in)::NO_COEF
+ logical, optional, intent(in)     :: all_ERIs, do_xc_dft
+ integer, intent(in)              :: NBF_tot, NBF_occ, NBF_jkl
+ real(dp), intent(in)             :: Occ(NBF_occ)
+ real(dp), optional, intent(inout) :: Edft_xc
+ real(dp), optional, intent(in)    :: DM2_JK(2, NBF_occ, NBF_occ)
+ real(dp), optional, intent(in)    :: NO_COEF(NBF_tot, NBF_tot)
+ real(dp), optional, intent(inout) :: hCORE(NBF_tot, NBF_tot)
+ real(dp), optional, intent(inout) :: ERImol(NBF_tot, NBF_jkl, NBF_jkl, NBF_jkl)
+ real(dp), optional, intent(inout) :: ERImolJsr(NBF_tot, NBF_jkl, NBF_jkl)
+ real(dp), optional, intent(inout) :: ERImolLsr(NBF_tot, NBF_jkl, NBF_jkl)
+ complex(dp), optional, intent(in)    :: NO_COEF_cmplx(NBF_tot, NBF_tot)
+ complex(dp), optional, intent(inout) :: hCORE_cmplx(NBF_tot, NBF_tot)
+ complex(dp), optional, intent(inout) :: ERImol_cmplx(NBF_tot, NBF_jkl, NBF_jkl, NBF_jkl)
+ complex(dp), optional, intent(inout) :: ERImolJsr_cmplx(NBF_tot, NBF_jkl, NBF_jkl)
+ complex(dp), optional, intent(inout) :: ERImolLsr_cmplx(NBF_tot, NBF_jkl, NBF_jkl)
  real(dp),allocatable,dimension(:,:)::TMP_hCORE
  logical::nbf_U_found
  integer::isite,isite1
