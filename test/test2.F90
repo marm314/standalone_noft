@@ -41,6 +41,7 @@ program noft_fcidump
  use m_noft_driver
  implicit none
  logical::restart=.false.
+ logical::nbf_FCIDUMP_found
  integer::INOF,Ista=0,NBF_tot,NBF_occ,Nfrozen,Npairs
  integer::Ncoupled=1,Nbeta_elect,Nalpha_elect
  integer::imethocc=1,imethorb=1,itermax=10000,iprintdmn=0,iprintswdmn=0,iprintints=0
@@ -53,12 +54,13 @@ program noft_fcidump
  external::mo_ints
  integer::ibasis,ibasis1,ibasis2,ibasis3,lwork,info
  integer::nbf_unit=25
- logical::nbf_FCIDUMP_found
 
  ! Read parameters
- if(iargc()/=4) then
+ if(iargc()/=4 .and. iargc()/=5) then
   write(*,'(a)') 'Include the arguments:'
   write(*,'(a)') ' INOF(integer) Nbasis(integer) Nalpha_electrons(integer) iguess(0 Hcore, 1 init MO basis)'
+  write(*,'(a)') ' or '
+  write(*,'(a)') ' INOF(integer) Nbasis(integer) Nalpha_electrons(integer) iguess(0 Hcore, 1 init MO basis) restart(integer)'
   stop
  endif
  call getarg(1,arg)
@@ -69,6 +71,8 @@ program noft_fcidump
  read(arg,'(i4)') Nalpha_elect
  call getarg(4,arg)
  read(arg,'(i4)') iguess
+ restart=.false.
+ if(iargc()==5) restart=.true.
 
  ! NOFT parameteres
  NBF_occ=NBF_tot
@@ -143,10 +147,18 @@ program noft_fcidump
  endif
  ! Initialize and run the optimization
  Occ=zero
- write(*,*) 'running NOFT module'
-  call run_noft(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect,&
- &   imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,&
- &   Enof,tolE,Vnn,MO_Overlap,Occ,mo_ints,ofile_name,NO_COEF=NO_COEF)
+ if(.not.restart) then
+   write(*,*) 'running NOFT module'
+   call run_noft(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect,&
+  &   imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,&
+  &   Enof,tolE,Vnn,MO_Overlap,Occ,mo_ints,ofile_name,NO_COEF=NO_COEF)
+ else
+   write(*,*) 'running NOFT module (restart)'
+   call run_noft(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect,&
+  &   imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,&
+  &   Enof,tolE,Vnn,MO_Overlap,Occ,mo_ints,ofile_name,NO_COEF=NO_COEF,restart=.true.,&
+  &   ireadGAMMAS=1,ireadOCC=1,ireadCOEF=1,ireadFdiag=1,iNOTupdateOCC=0,iNOTupdateORB=0)
+ endif
  ! Print the optimal energy 
  write(*,'(a)') ' '
  write(*,'(a,f12.6)') 'NOFT SCF energy',Enof
