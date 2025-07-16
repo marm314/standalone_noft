@@ -33,3 +33,13 @@ tes/test.x
 test.x
 m_tz_pccd_amplitudes.mod
 m_tz_pccd_amplitudes.o
+m_anti2unit.mod
+m_fcidump.mod
+m_hessian.mod
+m_hubbard.mod
+m_anti2unit.o
+m_hessian.o
+test2.x
+paul_fcidump/
+neg_U/
+fcidump/
