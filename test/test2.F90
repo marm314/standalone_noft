@@ -75,7 +75,7 @@ program noft_fcidump
  call getarg(4,arg)
  read(arg,'(i4)') iguess
  restart=.false.
- if(iargc()==5) then
+ if(iargc()==5 .or. iargc()==6) then
   call getarg(5,arg)
   read(arg,'(i4)') irestart
   if(irestart==1) restart=.true.
