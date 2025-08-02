@@ -60,7 +60,7 @@ contains
 !!
 !! SOURCE
 
-subroutine opt_orb(iter,imethod,ELAGd,RDMd,INTEGd,HESSIANd,Vnn,Energy,maxdiff,mo_ints,NO_COEF,NO_COEF_cmplx)
+subroutine opt_orb(iter,imethod,ELAGd,RDMd,INTEGd,HESSIANd,Vnn,Energy,maxdiff,mo_ints,Phases,NO_COEF,NO_COEF_cmplx)
 !Arguments ------------------------------------
 !scalars
  integer,intent(in)::iter,imethod
@@ -95,13 +95,14 @@ subroutine opt_orb(iter,imethod,ELAGd,RDMd,INTEGd,HESSIANd,Vnn,Energy,maxdiff,mo
   end subroutine mo_ints
  end interface
 !arrays
+ real(dp),intent(inout) :: Phases(RDMd%NBF_occ,RDMd%NBF_occ)
  real(dp),optional,dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(inout)::NO_COEF
  complex(dp),optional,dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(inout)::NO_COEF_cmplx
 !Local variables ------------------------------
 !scalars
  logical::convLambda,nogamma,diddiis,allocated_DMNs,all_ERIs
  logical::F_meth_printed,NR_meth_printed
- integer::icall,icall_method,istate,iorbmax1,iorbmax2,imethod_in
+ integer::icall,icall_method,iorbmax1,iorbmax2,imethod_in
  real(dp)::sumdiff,maxdiff_all,Ediff,Energy_old,Edft_xc
 !arrays
  real(dp),allocatable,dimension(:,:,:)::DM2_JK
@@ -114,7 +115,6 @@ subroutine opt_orb(iter,imethod,ELAGd,RDMd,INTEGd,HESSIANd,Vnn,Energy,maxdiff,mo
  icall_method=30
  imethod_in=imethod
 
- istate=1
  Ediff=zero; Energy=zero; Energy_old=zero; Edft_xc=zero; convLambda=.false.;nogamma=.true.;
  allocated_DMNs=.false.;F_meth_printed=.false.;NR_meth_printed=.false.;all_ERIs=.false.;
 
@@ -159,7 +159,7 @@ subroutine opt_orb(iter,imethod,ELAGd,RDMd,INTEGd,HESSIANd,Vnn,Energy,maxdiff,mo
   & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx,all_ERIs=all_ERIs)
   endif
   call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-  call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_old,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
+  call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_old,Phases,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
   & INTEGd%ERI_L_cmplx,INTEGd%ERI_Jsr_cmplx,INTEGd%ERI_Lsr_cmplx,nogamma=nogamma)
  else
   if(INTEGd%irange_sep/=0) then
@@ -171,7 +171,7 @@ subroutine opt_orb(iter,imethod,ELAGd,RDMd,INTEGd,HESSIANd,Vnn,Energy,maxdiff,mo
    & ERImol=INTEGd%ERImol,all_ERIs=all_ERIs)
   endif
   call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-  call calc_E_occ(RDMd,RDMd%GAMMAs_old,Energy_old,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K, &
+  call calc_E_occ(RDMd,RDMd%GAMMAs_old,Energy_old,Phases,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K, &
   & INTEGd%ERI_L,INTEGd%ERI_Jsr,INTEGd%ERI_Lsr,nogamma=nogamma)
  endif
 
@@ -218,7 +218,7 @@ subroutine opt_orb(iter,imethod,ELAGd,RDMd,INTEGd,HESSIANd,Vnn,Energy,maxdiff,mo
      & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx,all_ERIs=all_ERIs)
     endif
     call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-    call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
+    call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy,Phases,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
     & INTEGd%ERI_L_cmplx,INTEGd%ERI_Jsr_cmplx,INTEGd%ERI_Lsr_cmplx,nogamma=nogamma)
    else
     call diagF_to_coef(iter,icall,maxdiff,diddiis,ELAGd,RDMd,NO_COEF=NO_COEF) ! Build new NO_COEF and set icall=icall+1
@@ -232,20 +232,20 @@ subroutine opt_orb(iter,imethod,ELAGd,RDMd,INTEGd,HESSIANd,Vnn,Energy,maxdiff,mo
      & ERImol=INTEGd%ERImol,all_ERIs=all_ERIs)
     endif
     call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-    call calc_E_occ(RDMd,RDMd%GAMMAs_old,Energy,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K, &
+    call calc_E_occ(RDMd,RDMd%GAMMAs_old,Energy,Phases,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K, &
     & INTEGd%ERI_L,INTEGd%ERI_Jsr,INTEGd%ERI_Lsr,nogamma=nogamma)
     endif
   else                ! Use QC method to produce new COEFs
    call HESSIANd%build(ELAGd,RDMd,INTEGd,RDMd%DM2_J,RDMd%DM2_K,RDMd%DM2_L)
    if(INTEGd%complex_ints) then
-    call HESSIANd%quadratic_conver(icall,istate,RDMd%NBF_tot,kappa_mat_cmplx=kappa_mat_cmplx) ! kappa = - H^-1 g -> norm(kappa)
+    call HESSIANd%quadratic_conver(icall,RDMd%NBF_tot,kappa_mat_cmplx=kappa_mat_cmplx) ! kappa = - H^-1 g -> norm(kappa)
     call anti_2_unitary(RDMd%NBF_tot,X_mat_cmplx=kappa_mat_cmplx,U_mat_cmplx=U_mat_cmplx)
     NO_COEF_cmplx=matmul(NO_COEF_cmplx,U_mat_cmplx)
     ! Build all integrals in the new NO_COEF basis (including arrays for ERI_J and ERI_K)
     call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF_cmplx=NO_COEF_cmplx, &
     & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx,all_ERIs=all_ERIs)
     call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-    call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
+    call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy,Phases,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
     & INTEGd%ERI_L_cmplx,INTEGd%ERI_Jsr_cmplx,INTEGd%ERI_Lsr_cmplx,nogamma=nogamma)
    else
     if(INTEGd%irange_sep/=0) then
@@ -253,14 +253,14 @@ subroutine opt_orb(iter,imethod,ELAGd,RDMd,INTEGd,HESSIANd,Vnn,Energy,maxdiff,mo
      call write_output(msg)
      stop
     endif
-    call HESSIANd%quadratic_conver(icall,istate,RDMd%NBF_tot,kappa_mat=kappa_mat)             ! kappa = - H^-1 g -> norm(kappa)
+    call HESSIANd%quadratic_conver(icall,RDMd%NBF_tot,kappa_mat=kappa_mat)             ! kappa = - H^-1 g -> norm(kappa)
     call anti_2_unitary(RDMd%NBF_tot,X_mat=kappa_mat,U_mat=U_mat)                             
     NO_COEF=matmul(NO_COEF,U_mat)
     ! Build all integrals in the new NO_COEF basis (including arrays for ERI_J and ERI_K)
     call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF=NO_COEF,hCORE=INTEGd%hCORE, &
     & ERImol=INTEGd%ERImol,all_ERIs=all_ERIs)
     call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-    call calc_E_occ(RDMd,RDMd%GAMMAs_old,Energy,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K, &
+    call calc_E_occ(RDMd,RDMd%GAMMAs_old,Energy,Phases,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K, &
     & INTEGd%ERI_L,INTEGd%ERI_Jsr,INTEGd%ERI_Lsr,nogamma=nogamma)
    endif
   endif
@@ -303,10 +303,10 @@ subroutine opt_orb(iter,imethod,ELAGd,RDMd,INTEGd,HESSIANd,Vnn,Energy,maxdiff,mo
 
  ! Calc. the final Energy using fixed RDMs and the new NO_COEF (before going back to occ. optimization)
  if(INTEGd%complex_ints) then
-  call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
+  call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy,Phases,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
   & INTEGd%ERI_L_cmplx,INTEGd%ERI_Jsr_cmplx,INTEGd%ERI_Lsr_cmplx,nogamma=nogamma)
  else
-  call calc_E_occ(RDMd,RDMd%GAMMAs_old,Energy,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K, &
+  call calc_E_occ(RDMd,RDMd%GAMMAs_old,Energy,Phases,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K, &
   & INTEGd%ERI_L,INTEGd%ERI_Jsr,INTEGd%ERI_Lsr,nogamma=nogamma)
  endif
  write(msg,'(a,f15.6,a,i6,a)') 'Orb. optimized energy= ',Energy+Vnn,' after ',icall,' iter.'
@@ -616,7 +616,7 @@ end subroutine s2_calc
 !!
 !! SOURCE
 
-subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_COEF,NO_COEF_cmplx) 
+subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,Phases,NO_COEF,NO_COEF_cmplx) 
 !Arguments ------------------------------------
 !scalars
  integer,intent(in)::iorbp,iorbq,iorbr,iorbs
@@ -642,6 +642,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
   end subroutine mo_ints
  end interface
 !arrays
+ real(dp),intent(inout)::Phases(RDMd%NBF_occ,RDMd%NBF_occ)
  real(dp),optional,dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(in)::NO_COEF
  complex(dp),optional,dimension(RDMd%NBF_tot,RDMd%NBF_tot),intent(in)::NO_COEF_cmplx
 !Local variables ------------------------------
@@ -686,7 +687,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
   call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF_cmplx=NO_COEF_in_cmplx, &
   & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx)
   call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-  call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
+  call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,Phases,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
   & INTEGd%ERI_L_cmplx,INTEGd%ERI_Jsr_cmplx,INTEGd%ERI_Lsr_cmplx,nogamma=nogamma)
   Energy_00_00=Energy_in+Vnn
   ! kappa_pq_R=step,kappa_pq_I=0,kappa_rs_R=0,kappa_rs_I=0
@@ -698,7 +699,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
    call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF_cmplx=NO_COEF_in_cmplx, &
    & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx)
    call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-   call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
+   call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,Phases,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
    & INTEGd%ERI_L_cmplx,INTEGd%ERI_Jsr_cmplx,INTEGd%ERI_Lsr_cmplx,nogamma=nogamma)
    Energy_h0_00=Energy_in+Vnn
   endif
@@ -710,7 +711,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
   call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF_cmplx=NO_COEF_in_cmplx, &
   & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx)
   call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-  call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
+  call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,Phases,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
   & INTEGd%ERI_L_cmplx,INTEGd%ERI_Jsr_cmplx,INTEGd%ERI_Lsr_cmplx,nogamma=nogamma)
   Energy_0h_00=Energy_in+Vnn
   ! kappa_pq_R=0,kappa_pq_I=0,kappa_rs_R=step,kappa_rs_I=0
@@ -722,7 +723,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
    call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF_cmplx=NO_COEF_in_cmplx, &
    & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx)
    call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-   call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
+   call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,Phases,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
    & INTEGd%ERI_L_cmplx,INTEGd%ERI_Jsr_cmplx,INTEGd%ERI_Lsr_cmplx,nogamma=nogamma)
    Energy_00_h0=Energy_in+Vnn
   endif
@@ -734,7 +735,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
   call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF_cmplx=NO_COEF_in_cmplx, &
   & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx)
   call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-  call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
+  call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,Phases,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
   & INTEGd%ERI_L_cmplx,INTEGd%ERI_Jsr_cmplx,INTEGd%ERI_Lsr_cmplx,nogamma=nogamma)
   Energy_00_0h=Energy_in+Vnn
   ! kappa_pq_R=-step,kappa_pq_I=0,kappa_rs_R=0,kappa_rs_I=0
@@ -746,7 +747,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
    call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF_cmplx=NO_COEF_in_cmplx, &
    & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx)
    call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-   call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
+   call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,Phases,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
    & INTEGd%ERI_L_cmplx,INTEGd%ERI_Jsr_cmplx,INTEGd%ERI_Lsr_cmplx,nogamma=nogamma)
    Energy_mh0_00=Energy_in+Vnn
   endif
@@ -758,7 +759,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
   call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF_cmplx=NO_COEF_in_cmplx, &
   & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx)
   call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-  call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
+  call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,Phases,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
   & INTEGd%ERI_L_cmplx,INTEGd%ERI_Jsr_cmplx,INTEGd%ERI_Lsr_cmplx,nogamma=nogamma)
   Energy_0mh_00=Energy_in+Vnn
   ! kappa_pq_R=0,kappa_pq_I=0,kappa_rs_R=-step,kappa_rs_I=0
@@ -770,7 +771,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
    call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF_cmplx=NO_COEF_in_cmplx, &
    & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx)
    call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-   call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
+   call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,Phases,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
    & INTEGd%ERI_L_cmplx,INTEGd%ERI_Jsr_cmplx,INTEGd%ERI_Lsr_cmplx,nogamma=nogamma)
    Energy_00_mh0=Energy_in+Vnn
   endif
@@ -782,7 +783,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
   call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF_cmplx=NO_COEF_in_cmplx, &
   & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx)
   call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-  call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
+  call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,Phases,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
   & INTEGd%ERI_L_cmplx,INTEGd%ERI_Jsr_cmplx,INTEGd%ERI_Lsr_cmplx,nogamma=nogamma)
   Energy_00_0mh=Energy_in+Vnn
   ! kappa_pq_R=step,kappa_pq_I=0,kappa_rs_R=step,kappa_rs_I=0
@@ -795,7 +796,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
    call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF_cmplx=NO_COEF_in_cmplx, &
    & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx)
    call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-   call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
+   call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,Phases,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
    & INTEGd%ERI_L_cmplx,INTEGd%ERI_Jsr_cmplx,INTEGd%ERI_Lsr_cmplx,nogamma=nogamma)
    Energy_h0_h0=Energy_in+Vnn
   endif
@@ -809,7 +810,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
    call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF_cmplx=NO_COEF_in_cmplx, &
    & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx)
    call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-   call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
+   call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,Phases,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
    & INTEGd%ERI_L_cmplx,INTEGd%ERI_Jsr_cmplx,INTEGd%ERI_Lsr_cmplx,nogamma=nogamma)
    Energy_mh0_mh0=Energy_in+Vnn
   endif
@@ -822,7 +823,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
   call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF_cmplx=NO_COEF_in_cmplx, &
   & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx)
   call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-  call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
+  call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,Phases,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
   & INTEGd%ERI_L_cmplx,INTEGd%ERI_Jsr_cmplx,INTEGd%ERI_Lsr_cmplx,nogamma=nogamma)
   Energy_0h_0h=Energy_in+Vnn
   ! kappa_pq_R=0,kappa_pq_I=-step,kappa_rs_R=0,kappa_rs_I=-step
@@ -834,7 +835,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
   call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF_cmplx=NO_COEF_in_cmplx, &
   & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx)
   call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-  call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
+  call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,Phases,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
   & INTEGd%ERI_L_cmplx,INTEGd%ERI_Jsr_cmplx,INTEGd%ERI_Lsr_cmplx,nogamma=nogamma)
   Energy_0mh_0mh=Energy_in+Vnn
   ! kappa_pq_R=step,kappa_pq_I=0,kappa_rs_R=0,kappa_rs_I=step
@@ -851,7 +852,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
    call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF_cmplx=NO_COEF_in_cmplx, &
    & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx)
    call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-   call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
+   call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,Phases,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
    & INTEGd%ERI_L_cmplx,INTEGd%ERI_Jsr_cmplx,INTEGd%ERI_Lsr_cmplx,nogamma=nogamma)
    Energy_h0_0h=Energy_in+Vnn
   endif
@@ -869,7 +870,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
    call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF_cmplx=NO_COEF_in_cmplx, &
    & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx)
    call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-   call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
+   call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,Phases,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
    & INTEGd%ERI_L_cmplx,INTEGd%ERI_Jsr_cmplx,INTEGd%ERI_Lsr_cmplx,nogamma=nogamma)
    Energy_mh0_0mh=Energy_in+Vnn
   endif
@@ -887,7 +888,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
    call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF_cmplx=NO_COEF_in_cmplx, &
    & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx)
    call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-   call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
+   call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,Phases,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
    & INTEGd%ERI_L_cmplx,INTEGd%ERI_Jsr_cmplx,INTEGd%ERI_Lsr_cmplx,nogamma=nogamma)
    Energy_0h_h0=Energy_in+Vnn
   endif
@@ -905,7 +906,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
    call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF_cmplx=NO_COEF_in_cmplx, &
    & hCORE_cmplx=INTEGd%hCORE_cmplx,ERImol_cmplx=INTEGd%ERImol_cmplx)
    call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-   call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
+   call calc_E_occ_cmplx(RDMd,RDMd%GAMMAs_old,Energy_in,Phases,INTEGd%hCORE_cmplx,INTEGd%ERI_J_cmplx,INTEGd%ERI_K_cmplx, &
    & INTEGd%ERI_L_cmplx,INTEGd%ERI_Jsr_cmplx,INTEGd%ERI_Lsr_cmplx,nogamma=nogamma)
    Energy_0mh_mh0=Energy_in+Vnn
   endif
@@ -973,7 +974,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
   call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF=NO_COEF_in,hCORE=INTEGd%hCORE, &
   & ERImol=INTEGd%ERImol)
   call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-  call calc_E_occ(RDMd,RDMd%GAMMAs_old,Energy_in,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K, &
+  call calc_E_occ(RDMd,RDMd%GAMMAs_old,Energy_in,Phases,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K, &
   & INTEGd%ERI_L,INTEGd%ERI_Jsr,INTEGd%ERI_Lsr,nogamma=nogamma)
   Energy_00=Energy_in+Vnn
   if(iorbp/=iorbq) then ! avoiding k_pp
@@ -985,7 +986,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
    call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF=NO_COEF_in,hCORE=INTEGd%hCORE, &
    & ERImol=INTEGd%ERImol)
    call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-   call calc_E_occ(RDMd,RDMd%GAMMAs_old,Energy_in,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K, &
+   call calc_E_occ(RDMd,RDMd%GAMMAs_old,Energy_in,Phases,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K, &
    & INTEGd%ERI_L,INTEGd%ERI_Jsr,INTEGd%ERI_Lsr,nogamma=nogamma)
    Energy_h0=Energy_in+Vnn
    ! kappa_pq=-step,kappa_rs=0
@@ -996,7 +997,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
    call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF=NO_COEF_in,hCORE=INTEGd%hCORE, &
    & ERImol=INTEGd%ERImol)
    call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-   call calc_E_occ(RDMd,RDMd%GAMMAs_old,Energy_in,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K, &
+   call calc_E_occ(RDMd,RDMd%GAMMAs_old,Energy_in,Phases,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K, &
    & INTEGd%ERI_L,INTEGd%ERI_Jsr,INTEGd%ERI_Lsr,nogamma=nogamma)
    Energy_mh0=Energy_in+Vnn
   endif
@@ -1009,7 +1010,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
    call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF=NO_COEF_in,hCORE=INTEGd%hCORE, &
    & ERImol=INTEGd%ERImol)
    call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-   call calc_E_occ(RDMd,RDMd%GAMMAs_old,Energy_in,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K, &
+   call calc_E_occ(RDMd,RDMd%GAMMAs_old,Energy_in,Phases,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K, &
    & INTEGd%ERI_L,INTEGd%ERI_Jsr,INTEGd%ERI_Lsr,nogamma=nogamma)
    Energy_0h=Energy_in+Vnn
    ! kappa_pq=0,kappa_rs=-step
@@ -1020,7 +1021,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
    call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF=NO_COEF_in,hCORE=INTEGd%hCORE, &
    & ERImol=INTEGd%ERImol)
    call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-   call calc_E_occ(RDMd,RDMd%GAMMAs_old,Energy_in,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K, &
+   call calc_E_occ(RDMd,RDMd%GAMMAs_old,Energy_in,Phases,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K, &
    & INTEGd%ERI_L,INTEGd%ERI_Jsr,INTEGd%ERI_Lsr,nogamma=nogamma)
    Energy_0mh=Energy_in+Vnn
   endif
@@ -1034,7 +1035,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
    call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF=NO_COEF_in,hCORE=INTEGd%hCORE, &
    & ERImol=INTEGd%ERImol)
    call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-   call calc_E_occ(RDMd,RDMd%GAMMAs_old,Energy_in,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K, &
+   call calc_E_occ(RDMd,RDMd%GAMMAs_old,Energy_in,Phases,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K, &
    & INTEGd%ERI_L,INTEGd%ERI_Jsr,INTEGd%ERI_Lsr,nogamma=nogamma)
    Energy_hh=Energy_in+Vnn
    ! kappa_pq=-step,kappa_rs=-step
@@ -1046,7 +1047,7 @@ subroutine num_grad_hess_orb(iorbp,iorbq,iorbr,iorbs,RDMd,INTEGd,Vnn,mo_ints,NO_
    call mo_ints(RDMd%NBF_tot,RDMd%NBF_occ,INTEGd%NBF_jkl,RDMd%occ,NO_COEF=NO_COEF_in,hCORE=INTEGd%hCORE, &
    & ERImol=INTEGd%ERImol)
    call INTEGd%eritoeriJKL(RDMd%NBF_occ)
-   call calc_E_occ(RDMd,RDMd%GAMMAs_old,Energy_in,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K, &
+   call calc_E_occ(RDMd,RDMd%GAMMAs_old,Energy_in,Phases,INTEGd%hCORE,INTEGd%ERI_J,INTEGd%ERI_K, &
    & INTEGd%ERI_L,INTEGd%ERI_Jsr,INTEGd%ERI_Lsr,nogamma=nogamma)
    Energy_mhmh=Energy_in+Vnn
   endif

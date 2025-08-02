@@ -180,7 +180,7 @@ program noft_fcidump
    call run_noft(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect,&
   &   imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,&
   &   Enof,tolE,Vnn,MO_Overlap,Occ,mo_ints,ofile_name,NO_COEF=NO_COEF,restart=.true.,&
-  &   ireadGAMMAS=1,ireadOCC=1,ireadCOEF=1,ireadFdiag=1,iNOTupdateOCC=0,iNOTupdateORB=0)
+  &   ireadGAMMAS=1,ireadOCC=1,ireadCOEF=1,ireadFdiag=1,iNOTupdateOCC=0,iNOTupdateORB=freeze_orb)
  endif
  ! Print the optimal energy 
  write(*,'(a)') ' '
