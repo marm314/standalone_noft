@@ -41,26 +41,29 @@ program noft_fcidump
  use m_noft_driver
  implicit none
  logical::restart=.false.
- logical::nbf_FCIDUMP_found
+ logical::nbf_FCIDUMP_found,not_orb_opt
  integer::INOF,Ista=0,NBF_tot,NBF_occ,Nfrozen,Npairs
  integer::Ncoupled=1,Nbeta_elect,Nalpha_elect
  integer::imethocc=1,imethorb=1,itermax=10000,iprintdmn=0,iprintswdmn=0,iprintints=0
- integer::itolLambda=5,ndiis=5,iguess=0
+ integer::itolLambda=5,ndiis=5,iguess=0,irestart=0,iskip=0,freeze_orb=0
  real(dp)::Enof,tolE=tol9,Vnn=zero,Val
  real(dp),allocatable,dimension(:)::Occ,Work
  real(dp),allocatable,dimension(:,:)::NO_COEF,MO_Overlap,DM1
  character(len=100)::ofile_name
- character(len=32)::arg
+ character(len=100)::arg
  external::mo_ints
  integer::ibasis,ibasis1,ibasis2,ibasis3,lwork,info
  integer::nbf_unit=25
 
  ! Read parameters
- if(iargc()/=4 .and. iargc()/=5) then
+ if(iargc()/=4 .and. iargc()/=5 .and. iargc()/=6) then
   write(*,'(a)') 'Include the arguments:'
   write(*,'(a)') ' INOF(integer) Nbasis(integer) Nalpha_electrons(integer) iguess(0 Hcore, 1 init MO basis)'
   write(*,'(a)') ' or '
   write(*,'(a)') ' INOF(integer) Nbasis(integer) Nalpha_electrons(integer) iguess(0 Hcore, 1 init MO basis) restart(integer)'
+  write(*,'(a)') ' or '
+  write(*,'(a)') ' INOF(integer) Nbasis(integer) Nalpha_electrons(integer) iguess(0 Hcore, 1 init MO basis) restart(integer) & 
+                   skip_lines(integer)'
   stop
  endif
  call getarg(1,arg)
@@ -72,7 +75,16 @@ program noft_fcidump
  call getarg(4,arg)
  read(arg,'(i4)') iguess
  restart=.false.
- if(iargc()==5) restart=.true.
+ if(iargc()==5 .or. iargc()==6) then
+  call getarg(5,arg)
+  read(arg,'(i4)') irestart
+  if(irestart==1) restart=.true.
+ endif
+ if(iargc()==6) then
+  call getarg(6,arg)
+  read(arg,'(i4)') iskip
+  if(iskip==0) write(*,'(a)') 'Not skiiping lines in the fcidump.noft'
+ endif
 
  ! NOFT parameteres
  NBF_occ=NBF_tot
@@ -92,11 +104,22 @@ program noft_fcidump
  ! Read and store FCIDUMP info
  allocate(hCORE_IN(NBF_tot,NBF_tot),ERI_IN(NBF_tot,NBF_tot,NBF_tot,NBF_tot))
  hCORE_IN=0d0;ERI_IN=0d0;
+ inquire(file='NOT_ORB',exist=not_orb_opt)
+ if(not_orb_opt) freeze_orb=1
  inquire(file='FCIDUMP',exist=nbf_FCIDUMP_found)
  if(nbf_FCIDUMP_found) then
   open(newunit=nbf_unit,file='FCIDUMP',status='old',form='formatted')
+  if(iskip/=0) then
+   do ibasis=1,iskip
+    read(nbf_unit,'(a)') arg 
+   enddo 
+  endif
   do
-   read(nbf_unit,*) ibasis,ibasis1,ibasis2,ibasis3,Val
+   if(iskip==0) then
+    read(nbf_unit,*) ibasis,ibasis1,ibasis2,ibasis3,Val
+   else
+    read(nbf_unit,*) Val,ibasis,ibasis1,ibasis2,ibasis3
+   endif
    if(ibasis==-1 .and. ibasis1==-1 .and. ibasis2==-1 .and. ibasis3==-1) exit
    if(ibasis==0 .and. ibasis1==0 .and. ibasis2==0 .and. ibasis3==0) Vnn=Val
    if(ibasis/=0 .and. ibasis1/=0 .and. ibasis2==0 .and. ibasis3==0) then
@@ -151,17 +174,17 @@ program noft_fcidump
    write(*,*) 'running NOFT module'
    call run_noft(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect,&
   &   imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,&
-  &   Enof,tolE,Vnn,MO_Overlap,Occ,mo_ints,ofile_name,NO_COEF=NO_COEF)
+  &   Enof,tolE,Vnn,MO_Overlap,Occ,mo_ints,ofile_name,NO_COEF=NO_COEF,iNOTupdateORB=freeze_orb)
  else
    write(*,*) 'running NOFT module (restart)'
    call run_noft(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect,&
   &   imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,&
   &   Enof,tolE,Vnn,MO_Overlap,Occ,mo_ints,ofile_name,NO_COEF=NO_COEF,restart=.true.,&
-  &   ireadGAMMAS=1,ireadOCC=1,ireadCOEF=1,ireadFdiag=1,iNOTupdateOCC=0,iNOTupdateORB=0)
+  &   ireadGAMMAS=1,ireadOCC=1,ireadCOEF=1,ireadFdiag=1,iNOTupdateOCC=0,iNOTupdateORB=freeze_orb)
  endif
  ! Print the optimal energy 
  write(*,'(a)') ' '
- write(*,'(a,f12.6)') 'NOFT SCF energy',Enof
+ write(*,'(a,f20.8)') 'NOFT SCF energy',Enof
  write(*,'(a)') ' '
  write(*,*) 'Final density matrix on the initial basis'
  write(*,'(a)') ' '
