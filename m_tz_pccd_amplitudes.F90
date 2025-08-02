@@ -444,15 +444,6 @@ subroutine calc_tz_pCCD_amplitudes(ELAGd,RDMd,INTEGd,Vnn,Energy,Phases,iter_glob
   call write_output(msg)
   write(msg,'(a)') ' '
   call write_output(msg)
-  write(msg,'(a)') 'Current occ. numbers '
-  call write_output(msg)
-  do iorb=1,(RDMd%NBF_occ/10)*10,10
-   write(msg,'(f12.6,9f11.6)') two*RDMd%occ(iorb:iorb+9)
-   call write_output(msg)
-  enddo
-  iorb=(RDMd%NBF_occ/10)*10+1
-  write(msg,'(f12.6,*(f11.6))') two*RDMd%occ(iorb:)
-  call write_output(msg)
  endif
 
  deallocate(y_ij,y_ab)

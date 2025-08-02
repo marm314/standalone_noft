@@ -768,7 +768,7 @@ subroutine quadratic_conver_step(HESSIANd,icall,NBF_tot,kappa_mat,kappa_mat_cmpl
 !Arguments ------------------------------------
 !scalars
  integer,intent(inout)::icall
- integer,intent(in)::istate,NBF_tot
+ integer,intent(in)::NBF_tot
  class(hessian_t),intent(inout)::HESSIANd
 !arrays
  real(dp),optional,dimension(NBF_tot,NBF_tot),intent(inout)::kappa_mat
