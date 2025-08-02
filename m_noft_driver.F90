@@ -33,7 +33,7 @@ module m_noft_driver
 
  implicit none
 
- private :: read_restart,echo_input,occtogamma,build_real_nos
+ private :: read_restart,echo_input,occtogamma
 !!***
 
  public :: run_noft,gram_schmidt
@@ -100,7 +100,6 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
  integer,intent(in)::NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,Ncoupled_in,itolLambda,ndiis  
  integer,intent(in)::Nbeta_elect_in,Nalpha_elect_in
  real(dp),optional,intent(in)::Lpower
- real(dp),optional,intent(in)::PNOF7sup
  real(dp),intent(in)::Vnn,tolE_in
  real(dp),intent(inout)::Enof
  interface
@@ -218,14 +217,6 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
   if(present(Lpower)) then
    call rdm_init(RDMd,INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,Ncoupled_in,&
 &  Nbeta_elect_in,Nalpha_elect_in,irs_noft,Lpower=Lpower)
-  else
-   call rdm_init(RDMd,INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,Ncoupled_in,&
-&  Nbeta_elect_in,Nalpha_elect_in,irs_noft)
-  endif
- else if(INOF_in==70) then
-  if(present(PNOF7sup)) then
-   call rdm_init(RDMd,INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,Ncoupled_in,&
-&  Nbeta_elect_in,Nalpha_elect_in,irs_noft,PNOF7sup=PNOF7sup)
   else
    call rdm_init(RDMd,INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,Ncoupled_in,&
 &  Nbeta_elect_in,Nalpha_elect_in,irs_noft)
