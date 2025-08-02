@@ -454,6 +454,8 @@ subroutine calc_tz_pCCD_amplitudes(ELAGd,RDMd,INTEGd,Vnn,Energy,Phases,iter_glob
   endif
   write(msg,'(a,i6)') 'Number of global iter. ',iter_global
   call write_output(msg)
+  write(msg,'(a)') ' '
+  call write_output(msg)
  endif
 
  deallocate(y_ij,y_ab)
