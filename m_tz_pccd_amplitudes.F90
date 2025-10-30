@@ -28,7 +28,8 @@ module m_tz_pCCD_amplitudes
 
  implicit none
 
- private :: calc_t_residues,calc_z_residues,num_calc_Grad_t_amp,num_calc_Grad_z_amp,calc_t_Jia_diag,calc_E_sd
+ private :: calc_t_residues,calc_z_residues,calc_Grad_t_amp,calc_Grad_z_amp,calc_t_Jia_diag,calc_E_sd
+! private :: num_calc_Grad_t_amp,num_calc_Grad_z_amp
 !!***
 
  public :: calc_tz_pCCD_amplitudes
@@ -123,7 +124,7 @@ subroutine calc_tz_pCCD_amplitudes(ELAGd,RDMd,INTEGd,Vnn,Energy,Phases,iter_glob
   allocate(Grad_residue(RDMd%Namplitudes))
   call calc_t_residues(ELAGd,RDMd,INTEGd,y_ij)
   sumdiff_t=dsqrt(sum(RDMd%tz_residue(:,:)**two)) ! The function we are minimizing is sqrt(Sum_ia residue_ia^2)
-  call num_calc_Grad_t_amp(ELAGd,RDMd,INTEGd,y_ij,Grad_residue)
+  call calc_Grad_t_amp(ELAGd,RDMd,INTEGd,Grad_residue)
   do ipair=1,RDMd%Namplitudes
    if(converged .and. abs(Grad_residue(ipair))>tol6) converged=.false. 
   enddo
@@ -213,7 +214,7 @@ subroutine calc_tz_pCCD_amplitudes(ELAGd,RDMd,INTEGd,Vnn,Energy,Phases,iter_glob
     call calc_t_residues(ELAGd,RDMd,INTEGd,y_ij)
     sumdiff_t=dsqrt(sum(RDMd%tz_residue(:,:)**two)) ! The function we are minimizing is sqrt(Sum_ia residue_ia^2)
     ! Exit if phases are 'fine enough'
-    call num_calc_Grad_t_amp(ELAGd,RDMd,INTEGd,y_ij,Grad_residue)
+    call calc_Grad_t_amp(ELAGd,RDMd,INTEGd,Grad_residue)
     call LBFGS_INTERN(RDMd%Namplitudes,Mtosave,diag_tz,sumdiff_t,Grad_residue,diagco,diag,info_print,tol6,tol16,Work,iflag)
     if(iflag<=0) exit
     iter_t=iter_t+1
@@ -291,7 +292,7 @@ subroutine calc_tz_pCCD_amplitudes(ELAGd,RDMd,INTEGd,Vnn,Energy,Phases,iter_glob
    allocate(Grad_residue(RDMd%Namplitudes))
    call calc_z_residues(ELAGd,RDMd,INTEGd,y_ij,y_ab)
    sumdiff_z=dsqrt(sum(RDMd%tz_residue(:,:)**two)) ! The function we are minimizing is sqrt(Sum_ia residue_ia^2)
-   call num_calc_Grad_z_amp(ELAGd,RDMd,INTEGd,y_ij,y_ab,Grad_residue)
+   call calc_Grad_z_amp(ELAGd,RDMd,INTEGd,Grad_residue)
    do ipair=1,RDMd%Namplitudes
     if(converged .and. abs(Grad_residue(ipair))>tol6) converged=.false. 
    enddo
@@ -361,7 +362,7 @@ subroutine calc_tz_pCCD_amplitudes(ELAGd,RDMd,INTEGd,Vnn,Energy,Phases,iter_glob
      call calc_z_residues(ELAGd,RDMd,INTEGd,y_ij,y_ab)
      sumdiff_z=dsqrt(sum(RDMd%tz_residue(:,:)**two)) ! The function we are minimizing is sqrt(Sum_ia residue_ia^2)
      ! Exit if phases are 'fine enough'
-     call num_calc_Grad_z_amp(ELAGd,RDMd,INTEGd,y_ij,y_ab,Grad_residue)
+     call calc_Grad_z_amp(ELAGd,RDMd,INTEGd,Grad_residue)
      call LBFGS_INTERN(RDMd%Namplitudes,Mtosave,diag_tz,sumdiff_z,Grad_residue,diagco,diag,info_print,tol6,tol16,Work,iflag)
      if(iflag<=0) exit
      iter_z=iter_z+1
@@ -452,9 +453,9 @@ end subroutine calc_tz_pCCD_amplitudes
 !!***
 
 !!***
-!!****f* DoNOF/num_calc_Grad_t_amp
+!!****f* DoNOF/calc_Grad_t_amp
 !! NAME
-!!  num_calc_Grad_t_amp
+!!  calc_Grad_t_amp
 !!
 !! FUNCTION
 !!
@@ -468,7 +469,7 @@ end subroutine calc_tz_pCCD_amplitudes
 !!
 !! SOURCE
 
-subroutine num_calc_Grad_t_amp(ELAGd,RDMd,INTEGd,y_ij,Grad_residue) 
+subroutine calc_Grad_t_amp(ELAGd,RDMd,INTEGd,Grad_residue)
 !Arguments ------------------------------------
 !scalars
  type(elag_t),intent(inout)::ELAGd
@@ -476,50 +477,396 @@ subroutine num_calc_Grad_t_amp(ELAGd,RDMd,INTEGd,y_ij,Grad_residue)
  type(integ_t),intent(inout)::INTEGd
 !arrays
  real(dp),dimension(RDMd%Namplitudes)::Grad_residue
- real(dp),dimension(RDMd%Npairs,RDMd%Npairs)::y_ij
 !Local variables ------------------------------
 !scalars
- integer::iorb,iorb1
- real(dp)::saved_t,sum_tmp,step=tol6
+ integer::iorb,iorb1,iorb2,iorb3,iorb4,iorb5,iorbi,iorba,iorbk,iorbd
+ integer::nVir,nOcc,index_ia,index_jb
+ real(dp)::sum_tmp,sumdiff_t,tol10=1e-10
 !arrays
+ real(dp),allocatable,dimension(:,:)::Grad_res_wrt_tia
  real(dp),allocatable,dimension(:,:)::Grad_res_tmp
 !************************************************************************
- 
- allocate(Grad_res_tmp(RDMd%Npairs,RDMd%NBF_occ-(RDMd%Nfrozen+RDMd%Npairs)))
- Grad_res_tmp=zero
 
- do iorb=1,RDMd%Npairs
-  do iorb1=1,RDMd%NBF_occ-(RDMd%Nfrozen+RDMd%Npairs)
-   saved_t=RDMd%t_pccd_old(iorb,iorb1)
-   ! 2*step
-   RDMd%t_pccd_old(iorb,iorb1)=RDMd%t_pccd_old(iorb,iorb1)+two*step
-   call calc_t_residues(ELAGd,RDMd,INTEGd,y_ij)
-   sum_tmp=-dsqrt(sum(RDMd%tz_residue(:,:)**two)) 
-   ! step
-   RDMd%t_pccd_old(iorb,iorb1)=RDMd%t_pccd_old(iorb,iorb1)-step
-   call calc_t_residues(ELAGd,RDMd,INTEGd,y_ij)
-   sum_tmp=sum_tmp+eight*dsqrt(sum(RDMd%tz_residue(:,:)**two))
-   ! -step
-   RDMd%t_pccd_old(iorb,iorb1)=RDMd%t_pccd_old(iorb,iorb1)-two*step
-   call calc_t_residues(ELAGd,RDMd,INTEGd,y_ij)
-   sum_tmp=sum_tmp-eight*dsqrt(sum(RDMd%tz_residue(:,:)**two))
-   ! -2*step
-   RDMd%t_pccd_old(iorb,iorb1)=RDMd%t_pccd_old(iorb,iorb1)-step
-   call calc_t_residues(ELAGd,RDMd,INTEGd,y_ij)
-   sum_tmp=sum_tmp+dsqrt(sum(RDMd%tz_residue(:,:)**two)) 
-   ! Save the gradient
-   Grad_res_tmp(iorb,iorb1)=sum_tmp/(twelve*step) 
-   ! Recover t_pccd_old
-   RDMd%t_pccd_old(iorb,iorb1)=saved_t
+ nOcc=RDMd%Npairs
+ nVir=RDMd%NBF_occ-(RDMd%Nfrozen+RDMd%Npairs)
+ allocate(Grad_res_wrt_tia(nOcc*nVir,nOcc*nVir))
+ allocate(Grad_res_tmp(nOcc,nVir))
+ Grad_res_tmp=zero
+ Grad_res_wrt_tia=zero
+
+ ! d r_ia / d t_kd
+ ! Residue r_ia = r_iorb,iorb1
+ do iorb=1,nOcc
+  iorbi=iorb+RDMd%Nfrozen
+  do iorb1=1,nVir
+   iorba=iorb1+nOcc+RDMd%Nfrozen
+   index_ia=iorb1+(iorb-1)*nVir
+   ! d r_iorb,iorb1 / d t_iorb2,iorb3 with t_kd = t_iorb2,iorb3
+   do iorb2=1,nOcc
+    iorbk=iorb2+RDMd%Nfrozen
+    do iorb3=1,nVir
+     iorbd=iorb3+nOcc+RDMd%Nfrozen
+     index_jb=iorb3+(iorb2-1)*nVir
+     ! i=k and a=d
+     if(iorb==iorb2 .and. iorb1==iorb3) then
+      if(INTEGd%complex_ints) then
+       Grad_res_wrt_tia(index_ia,index_jb)=Grad_res_wrt_tia(index_ia,index_jb)   &
+       &   -two*(two*real(INTEGd%ERImol_cmplx(iorbi,iorba,iorbi,iorba))          &
+       &   -real(INTEGd%ERImol_cmplx(iorba,iorbi,iorbi,iorba))                   &
+       &   -real(INTEGd%ERImol_cmplx(iorba,iorbi,iorbi,iorba))*RDMd%t_pccd_old(iorb,iorb1))                               
+       Grad_res_wrt_tia(index_ia,index_jb)=Grad_res_wrt_tia(index_ia,index_jb)   &
+       &   +two*real(INTEGd%ERImol_cmplx(iorba,iorbi,iorbi,iorba))*RDMd%t_pccd_old(iorb,iorb1)
+       Grad_res_wrt_tia(index_ia,index_jb)=Grad_res_wrt_tia(index_ia,index_jb)   &
+       &   +two*(ELAGd%Lambdas_pp(iorba)-ELAGd%Lambdas_pp(iorbi))
+       sum_tmp=zero
+       do iorb4=1,nOcc
+        iorb5=iorb4+RDMd%Nfrozen
+        sum_tmp=sum_tmp+real(INTEGd%ERImol_cmplx(iorba,iorb5,iorb5,iorba))*RDMd%t_pccd_old(iorb4,iorb1)
+       enddo
+       do iorb4=1,nVir
+        iorb5=iorb4+nOcc+RDMd%Nfrozen
+        sum_tmp=sum_tmp+real(INTEGd%ERImol_cmplx(iorb5,iorbi,iorbi,iorb5))*RDMd%t_pccd_old(iorb,iorb4)
+       enddo
+       Grad_res_wrt_tia(index_ia,index_jb)=Grad_res_wrt_tia(index_ia,index_jb)-two*sum_tmp
+      else
+       Grad_res_wrt_tia(index_ia,index_jb)=Grad_res_wrt_tia(index_ia,index_jb)   &
+       &   -two*(two*INTEGd%ERImol(iorbi,iorba,iorbi,iorba)                      &
+       &   -INTEGd%ERImol(iorba,iorbi,iorbi,iorba)                               &
+       &   -INTEGd%ERImol(iorba,iorbi,iorbi,iorba)*RDMd%t_pccd_old(iorb,iorb1))                               
+       Grad_res_wrt_tia(index_ia,index_jb)=Grad_res_wrt_tia(index_ia,index_jb)   &
+       &   +two*INTEGd%ERImol(iorba,iorbi,iorbi,iorba)*RDMd%t_pccd_old(iorb,iorb1)
+       Grad_res_wrt_tia(index_ia,index_jb)=Grad_res_wrt_tia(index_ia,index_jb)   &
+       &   +two*(ELAGd%Lambdas_pp(iorba)-ELAGd%Lambdas_pp(iorbi))
+       sum_tmp=zero
+       do iorb4=1,nOcc
+        iorb5=iorb4+RDMd%Nfrozen
+        sum_tmp=sum_tmp+INTEGd%ERImol(iorba,iorb5,iorb5,iorba)*RDMd%t_pccd_old(iorb4,iorb1)
+       enddo
+       do iorb4=1,nVir
+        iorb5=iorb4+nOcc+RDMd%Nfrozen
+        sum_tmp=sum_tmp+INTEGd%ERImol(iorb5,iorbi,iorbi,iorb5)*RDMd%t_pccd_old(iorb,iorb4)
+       enddo
+       Grad_res_wrt_tia(index_ia,index_jb)=Grad_res_wrt_tia(index_ia,index_jb)-two*sum_tmp
+      endif
+     endif
+     ! a=d
+     if(iorb1==iorb3) then
+      if(INTEGd%complex_ints) then
+       do iorb4=1,nVir
+        iorb5=iorb4+nOcc+RDMd%Nfrozen
+        Grad_res_wrt_tia(index_ia,index_jb)=Grad_res_wrt_tia(index_ia,index_jb) &
+        &   +real(INTEGd%ERImol_cmplx(iorb5,iorbk,iorbk,iorb5))*RDMd%t_pccd_old(iorb,iorb4)
+       enddo
+       Grad_res_wrt_tia(index_ia,index_jb)=Grad_res_wrt_tia(index_ia,index_jb) &
+       &   +real(INTEGd%ERImol_cmplx(iorbi,iorbk,iorbk,iorbi))
+       Grad_res_wrt_tia(index_ia,index_jb)=Grad_res_wrt_tia(index_ia,index_jb) &
+       &   -two*real(INTEGd%ERImol_cmplx(iorba,iorbk,iorbk,iorba))*RDMd%t_pccd_old(iorb,iorb1)
+      else
+       do iorb4=1,nVir
+        iorb5=iorb4+nOcc+RDMd%Nfrozen
+        Grad_res_wrt_tia(index_ia,index_jb)=Grad_res_wrt_tia(index_ia,index_jb) &
+        &   +INTEGd%ERImol(iorb5,iorbk,iorbk,iorb5)*RDMd%t_pccd_old(iorb,iorb4)
+       enddo
+       Grad_res_wrt_tia(index_ia,index_jb)=Grad_res_wrt_tia(index_ia,index_jb) &
+       &   +INTEGd%ERImol(iorbi,iorbk,iorbk,iorbi)
+       Grad_res_wrt_tia(index_ia,index_jb)=Grad_res_wrt_tia(index_ia,index_jb) &
+       &   -two*INTEGd%ERImol(iorba,iorbk,iorbk,iorba)*RDMd%t_pccd_old(iorb,iorb1)
+      endif
+     endif
+     ! i=k
+     if(iorb==iorb2) then
+      if(INTEGd%complex_ints) then
+       do iorb4=1,nOcc
+        iorb5=iorb4+RDMd%Nfrozen
+        Grad_res_wrt_tia(index_ia,index_jb)=Grad_res_wrt_tia(index_ia,index_jb) &
+        &   +real(INTEGd%ERImol_cmplx(iorbd,iorb5,iorb5,iorbd))*RDMd%t_pccd_old(iorb4,iorb1)
+       enddo
+       Grad_res_wrt_tia(index_ia,index_jb)=Grad_res_wrt_tia(index_ia,index_jb) &
+       &   +real(INTEGd%ERImol_cmplx(iorbd,iorba,iorba,iorbd))
+       Grad_res_wrt_tia(index_ia,index_jb)=Grad_res_wrt_tia(index_ia,index_jb) &
+       &   -two*real(INTEGd%ERImol_cmplx(iorbd,iorbi,iorbi,iorbd)*RDMd%t_pccd_old(iorb,iorb1))
+      else
+       do iorb4=1,nOcc
+        iorb5=iorb4+RDMd%Nfrozen
+        Grad_res_wrt_tia(index_ia,index_jb)=Grad_res_wrt_tia(index_ia,index_jb) &
+        &   +INTEGd%ERImol(iorbd,iorb5,iorb5,iorbd)*RDMd%t_pccd_old(iorb4,iorb1)
+       enddo
+       Grad_res_wrt_tia(index_ia,index_jb)=Grad_res_wrt_tia(index_ia,index_jb) &
+       &   +INTEGd%ERImol(iorbd,iorba,iorba,iorbd)
+       Grad_res_wrt_tia(index_ia,index_jb)=Grad_res_wrt_tia(index_ia,index_jb) &
+       &   -two*INTEGd%ERImol(iorbd,iorbi,iorbi,iorbd)*RDMd%t_pccd_old(iorb,iorb1)
+      endif
+     endif
+    enddo
+   enddo
   enddo
  enddo
- 
+
+ ! d f(r) / d t_kb = sum_ia d f(r) / d r_ia  * d r_ia / d t_kb
+ sumdiff_t=dsqrt(sum(RDMd%tz_residue(:,:)**two)) ! The function we are minimizing is sqrt(Sum_ia residue_ia^2)
+ do iorb=1,nOcc
+  do iorb1=1,nVir
+   index_ia=iorb1+(iorb-1)*nVir
+   do iorb2=1,nOcc
+    do iorb3=1,nVir
+     if(abs(RDMd%tz_residue(iorb2,iorb3))>tol10) then
+      index_jb=iorb3+(iorb2-1)*nVir
+      Grad_res_tmp(iorb,iorb1)=Grad_res_tmp(iorb,iorb1)+RDMd%tz_residue(iorb2,iorb3) &
+      &   *Grad_res_wrt_tia(index_jb,index_ia)/sumdiff_t
+     endif
+    enddo
+   enddo
+  enddo
+ enddo
+
  Grad_residue=reshape(Grad_res_tmp,(/RDMd%Namplitudes/))
 
- deallocate(Grad_res_tmp)
+ deallocate(Grad_res_tmp,Grad_res_wrt_tia)
 
-end subroutine num_calc_Grad_t_amp
+end subroutine calc_Grad_t_amp
 !!***
+
+
+!!***
+!!****f* DoNOF/calc_Grad_z_amp
+!! NAME
+!!  calc_Grad_z_amp
+!!
+!! FUNCTION
+!!
+!! INPUTS
+!!
+!! OUTPUT
+!!
+!! PARENTS
+!!  
+!! CHILDREN
+!!
+!! SOURCE
+
+subroutine calc_Grad_z_amp(ELAGd,RDMd,INTEGd,Grad_residue)
+!Arguments ------------------------------------
+!scalars
+ type(elag_t),intent(inout)::ELAGd
+ type(rdm_t),intent(inout)::RDMd
+ type(integ_t),intent(inout)::INTEGd
+!arrays
+ real(dp),dimension(RDMd%Namplitudes)::Grad_residue
+!Local variables ------------------------------
+!scalars
+ integer::iorb,iorb1,iorb2,iorb3,iorb4,iorb5,iorbi,iorba,iorbk,iorbd
+ integer::nVir,nOcc,index_ia,index_jb
+ real(dp)::sum_tmp,sumdiff_t,tol10=1e-10
+!arrays
+ real(dp),allocatable,dimension(:,:)::Grad_res_wrt_zia
+ real(dp),allocatable,dimension(:,:)::Grad_res_tmp
+!************************************************************************
+
+ nOcc=RDMd%Npairs
+ nVir=RDMd%NBF_occ-(RDMd%Nfrozen+RDMd%Npairs)
+ allocate(Grad_res_wrt_zia(nOcc*nVir,nOcc*nVir))
+ allocate(Grad_res_tmp(nOcc,nVir))
+ Grad_res_tmp=zero
+ Grad_res_wrt_zia=zero
+
+ ! d r_ia / d z_kd
+ ! Residue r_ia = r_iorb,iorb1
+ do iorb=1,nOcc
+  iorbi=iorb+RDMd%Nfrozen
+  do iorb1=1,nVir
+   iorba=iorb1+nOcc+RDMd%Nfrozen
+   index_ia=iorb1+(iorb-1)*nVir
+   ! d r_iorb,iorb1 / d z_iorb2,iorb3 with z_kd = z_iorb2,zorb3
+   do iorb2=1,nOcc
+    iorbk=iorb2+RDMd%Nfrozen
+    do iorb3=1,nVir
+     iorbd=iorb3+nOcc+RDMd%Nfrozen
+     index_jb=iorb3+(iorb2-1)*nVir
+     ! i=k and a=d
+     if(iorb==iorb2 .and. iorb1==iorb3) then
+      if(INTEGd%complex_ints) then
+       Grad_res_wrt_zia(index_ia,index_jb)=Grad_res_wrt_zia(index_ia,index_jb)   &
+       &   -two*(two*real(INTEGd%ERImol_cmplx(iorbi,iorba,iorbi,iorba))          &
+       &   -real(INTEGd%ERImol_cmplx(iorba,iorbi,iorbi,iorba))                   &
+       &   -two*real(INTEGd%ERImol_cmplx(iorba,iorbi,iorbi,iorba))*RDMd%t_pccd_old(iorb,iorb1))
+       Grad_res_wrt_zia(index_ia,index_jb)=Grad_res_wrt_zia(index_ia,index_jb)   &
+       &   +two*(ELAGd%Lambdas_pp(iorba)-ELAGd%Lambdas_pp(iorbi))
+       sum_tmp=zero
+       do iorb4=1,nOcc
+        iorb5=iorb4+RDMd%Nfrozen
+        sum_tmp=sum_tmp+real(INTEGd%ERImol_cmplx(iorba,iorb5,iorb5,iorba))*RDMd%t_pccd_old(iorb4,iorb1)
+       enddo
+       do iorb4=1,nVir
+        iorb5=iorb4+nOcc+RDMd%Nfrozen
+        sum_tmp=sum_tmp+real(INTEGd%ERImol_cmplx(iorb5,iorbi,iorbi,iorb5))*RDMd%t_pccd_old(iorb,iorb4)
+       enddo
+       Grad_res_wrt_zia(index_ia,index_jb)=Grad_res_wrt_zia(index_ia,index_jb)-two*sum_tmp
+      else
+       Grad_res_wrt_zia(index_ia,index_jb)=Grad_res_wrt_zia(index_ia,index_jb)   &
+       &   -two*(two*INTEGd%ERImol(iorbi,iorba,iorbi,iorba)                      &
+       &   -INTEGd%ERImol(iorba,iorbi,iorbi,iorba)                               &
+       &   -two*INTEGd%ERImol(iorba,iorbi,iorbi,iorba)*RDMd%t_pccd_old(iorb,iorb1))
+       Grad_res_wrt_zia(index_ia,index_jb)=Grad_res_wrt_zia(index_ia,index_jb)   &
+       &   +two*(ELAGd%Lambdas_pp(iorba)-ELAGd%Lambdas_pp(iorbi))
+       sum_tmp=zero
+       do iorb4=1,nOcc
+        iorb5=iorb4+RDMd%Nfrozen
+        sum_tmp=sum_tmp+INTEGd%ERImol(iorba,iorb5,iorb5,iorba)*RDMd%t_pccd_old(iorb4,iorb1)
+       enddo
+       do iorb4=1,nVir
+        iorb5=iorb4+nOcc+RDMd%Nfrozen
+        sum_tmp=sum_tmp+INTEGd%ERImol(iorb5,iorbi,iorbi,iorb5)*RDMd%t_pccd_old(iorb,iorb4)
+       enddo
+       Grad_res_wrt_zia(index_ia,index_jb)=Grad_res_wrt_zia(index_ia,index_jb)-two*sum_tmp
+      endif
+     endif
+     ! a=d
+     if(iorb1==iorb3) then
+      if(INTEGd%complex_ints) then
+       Grad_res_wrt_zia(index_ia,index_jb)=Grad_res_wrt_zia(index_ia,index_jb) &
+       &   +real(INTEGd%ERImol_cmplx(iorbi,iorbk,iorbk,iorbi))
+       Grad_res_wrt_zia(index_ia,index_jb)=Grad_res_wrt_zia(index_ia,index_jb) &
+       &   -two*real(INTEGd%ERImol_cmplx(iorba,iorbi,iorbi,iorba))*RDMd%t_pccd_old(iorb2,iorb1)
+       do iorb4=1,nVir
+        iorb5=iorb4+nOcc+RDMd%Nfrozen
+        Grad_res_wrt_zia(index_ia,index_jb)=Grad_res_wrt_zia(index_ia,index_jb) &
+        &   +real(INTEGd%ERImol_cmplx(iorb5,iorbi,iorbi,iorb5))*RDMd%t_pccd_old(iorb2,iorb4)
+       enddo
+      else
+       Grad_res_wrt_zia(index_ia,index_jb)=Grad_res_wrt_zia(index_ia,index_jb) &
+       &   +INTEGd%ERImol(iorbi,iorbk,iorbk,iorbi)
+       Grad_res_wrt_zia(index_ia,index_jb)=Grad_res_wrt_zia(index_ia,index_jb) &
+       &   -two*INTEGd%ERImol(iorba,iorbi,iorbi,iorba)*RDMd%t_pccd_old(iorb2,iorb1)
+       do iorb4=1,nVir
+        iorb5=iorb4+nOcc+RDMd%Nfrozen
+        Grad_res_wrt_zia(index_ia,index_jb)=Grad_res_wrt_zia(index_ia,index_jb) &
+        &   +INTEGd%ERImol(iorb5,iorbi,iorbi,iorb5)*RDMd%t_pccd_old(iorb2,iorb4)
+       enddo
+      endif
+     endif
+     ! i=k
+     if(iorb==iorb2) then
+      if(INTEGd%complex_ints) then
+       Grad_res_wrt_zia(index_ia,index_jb)=Grad_res_wrt_zia(index_ia,index_jb) &
+       &   +real(INTEGd%ERImol_cmplx(iorbd,iorba,iorba,iorbd))
+       Grad_res_wrt_zia(index_ia,index_jb)=Grad_res_wrt_zia(index_ia,index_jb) &
+       &   -two*real(INTEGd%ERImol_cmplx(iorba,iorbi,iorbi,iorba))*RDMd%t_pccd_old(iorb,iorb3)
+       do iorb4=1,nOcc
+        iorb5=iorb4+RDMd%Nfrozen
+        Grad_res_wrt_zia(index_ia,index_jb)=Grad_res_wrt_zia(index_ia,index_jb) &
+        &   +real(INTEGd%ERImol_cmplx(iorba,iorb5,iorb5,iorba))*RDMd%t_pccd_old(iorb4,iorb3)
+       enddo
+      else
+       Grad_res_wrt_zia(index_ia,index_jb)=Grad_res_wrt_zia(index_ia,index_jb) &
+       &   +INTEGd%ERImol(iorbd,iorba,iorba,iorbd)
+       Grad_res_wrt_zia(index_ia,index_jb)=Grad_res_wrt_zia(index_ia,index_jb) &
+       &   -two*INTEGd%ERImol(iorba,iorbi,iorbi,iorba)*RDMd%t_pccd_old(iorb,iorb3)
+       do iorb4=1,nOcc
+        iorb5=iorb4+RDMd%Nfrozen
+        Grad_res_wrt_zia(index_ia,index_jb)=Grad_res_wrt_zia(index_ia,index_jb) &
+        &   +INTEGd%ERImol(iorba,iorb5,iorb5,iorba)*RDMd%t_pccd_old(iorb4,iorb3)
+       enddo
+      endif
+     endif
+    enddo
+   enddo
+  enddo
+ enddo
+
+ ! d f(r) / d z_kb = sum_ia d f(r) / d r_ia  * d r_ia / d z_kb
+ sumdiff_t=dsqrt(sum(RDMd%tz_residue(:,:)**two)) ! The function we are minimizing is sqrt(Sum_ia residue_ia^2)
+ do iorb=1,nOcc
+  do iorb1=1,nVir
+   index_ia=iorb1+(iorb-1)*nVir
+   do iorb2=1,nOcc
+    do iorb3=1,nVir
+     if(abs(RDMd%tz_residue(iorb2,iorb3))>tol10) then
+      index_jb=iorb3+(iorb2-1)*nVir
+      Grad_res_tmp(iorb,iorb1)=Grad_res_tmp(iorb,iorb1)+RDMd%tz_residue(iorb2,iorb3) &
+      &   *Grad_res_wrt_zia(index_jb,index_ia)/sumdiff_t
+     endif
+    enddo
+   enddo
+  enddo
+ enddo
+
+ Grad_residue=reshape(Grad_res_tmp,(/RDMd%Namplitudes/))
+
+ deallocate(Grad_res_tmp,Grad_res_wrt_zia)
+
+end subroutine calc_Grad_z_amp
+!!***
+
+
+! !!***
+! !!****f* DoNOF/num_calc_Grad_t_amp
+! !! NAME
+! !!  num_calc_Grad_t_amp
+! !!
+! !! FUNCTION
+! !!
+! !! INPUTS
+! !!
+! !! OUTPUT
+! !!
+! !! PARENTS
+! !!  
+! !! CHILDREN
+! !!
+! !! SOURCE
+! 
+! subroutine num_calc_Grad_t_amp(ELAGd,RDMd,INTEGd,y_ij,Grad_residue) 
+! !Arguments ------------------------------------
+! !scalars
+!  type(elag_t),intent(inout)::ELAGd
+!  type(rdm_t),intent(inout)::RDMd
+!  type(integ_t),intent(inout)::INTEGd
+! !arrays
+!  real(dp),dimension(RDMd%Namplitudes)::Grad_residue
+!  real(dp),dimension(RDMd%Npairs,RDMd%Npairs)::y_ij
+! !Local variables ------------------------------
+! !scalars
+!  integer::iorb,iorb1
+!  real(dp)::saved_t,sum_tmp,step=tol6
+! !arrays
+!  real(dp),allocatable,dimension(:,:)::Grad_res_tmp
+! !************************************************************************
+!  
+!  allocate(Grad_res_tmp(RDMd%Npairs,RDMd%NBF_occ-(RDMd%Nfrozen+RDMd%Npairs)))
+!  Grad_res_tmp=zero
+! 
+!  do iorb=1,RDMd%Npairs
+!   do iorb1=1,RDMd%NBF_occ-(RDMd%Nfrozen+RDMd%Npairs)
+!    saved_t=RDMd%t_pccd_old(iorb,iorb1)
+!    ! 2*step
+!    RDMd%t_pccd_old(iorb,iorb1)=RDMd%t_pccd_old(iorb,iorb1)+two*step
+!    call calc_t_residues(ELAGd,RDMd,INTEGd,y_ij)
+!    sum_tmp=-dsqrt(sum(RDMd%tz_residue(:,:)**two)) 
+!    ! step
+!    RDMd%t_pccd_old(iorb,iorb1)=RDMd%t_pccd_old(iorb,iorb1)-step
+!    call calc_t_residues(ELAGd,RDMd,INTEGd,y_ij)
+!    sum_tmp=sum_tmp+eight*dsqrt(sum(RDMd%tz_residue(:,:)**two))
+!    ! -step
+!    RDMd%t_pccd_old(iorb,iorb1)=RDMd%t_pccd_old(iorb,iorb1)-two*step
+!    call calc_t_residues(ELAGd,RDMd,INTEGd,y_ij)
+!    sum_tmp=sum_tmp-eight*dsqrt(sum(RDMd%tz_residue(:,:)**two))
+!    ! -2*step
+!    RDMd%t_pccd_old(iorb,iorb1)=RDMd%t_pccd_old(iorb,iorb1)-step
+!    call calc_t_residues(ELAGd,RDMd,INTEGd,y_ij)
+!    sum_tmp=sum_tmp+dsqrt(sum(RDMd%tz_residue(:,:)**two)) 
+!    ! Save the gradient
+!    Grad_res_tmp(iorb,iorb1)=sum_tmp/(twelve*step) 
+!    ! Recover t_pccd_old
+!    RDMd%t_pccd_old(iorb,iorb1)=saved_t
+!   enddo
+!  enddo
+!  
+!  Grad_residue=reshape(Grad_res_tmp,(/RDMd%Namplitudes/))
+! 
+!  deallocate(Grad_res_tmp)
+! 
+! end subroutine num_calc_Grad_t_amp
+! !!***
 
 !!***
 !!****f* DoNOF/num_calc_Grad_z_amp
@@ -538,59 +885,59 @@ end subroutine num_calc_Grad_t_amp
 !!
 !! SOURCE
 
-subroutine num_calc_Grad_z_amp(ELAGd,RDMd,INTEGd,y_ij,y_ab,Grad_residue) 
-!Arguments ------------------------------------
-!scalars
- type(elag_t),intent(inout)::ELAGd
- type(rdm_t),intent(inout)::RDMd
- type(integ_t),intent(inout)::INTEGd
-!arrays
- real(dp),dimension(RDMd%Namplitudes)::Grad_residue
- real(dp),dimension(RDMd%Npairs,RDMd%Npairs)::y_ij
- real(dp),dimension(RDMd%NBF_occ-(RDMd%Nfrozen+RDMd%Npairs),RDMd%NBF_occ-(RDMd%Nfrozen+RDMd%Npairs))::y_ab
-!Local variables ------------------------------
-!scalars
- integer::iorb,iorb1
- real(dp)::saved_z,sum_tmp,step=tol6
-!arrays
- real(dp),allocatable,dimension(:,:)::Grad_res_tmp
-!************************************************************************
- 
- allocate(Grad_res_tmp(RDMd%Npairs,RDMd%NBF_occ-(RDMd%Nfrozen+RDMd%Npairs)))
- Grad_res_tmp=zero
-
- do iorb=1,RDMd%Npairs
-  do iorb1=1,RDMd%NBF_occ-(RDMd%Nfrozen+RDMd%Npairs)
-   saved_z=RDMd%z_pccd_old(iorb,iorb1)
-   ! 2*step
-   RDMd%z_pccd_old(iorb,iorb1)=RDMd%z_pccd_old(iorb,iorb1)+two*step
-   call calc_z_residues(ELAGd,RDMd,INTEGd,y_ij,y_ab)
-   sum_tmp=-dsqrt(sum(RDMd%tz_residue(:,:)**two))
-   ! step
-   RDMd%z_pccd_old(iorb,iorb1)=RDMd%z_pccd_old(iorb,iorb1)-step
-   call calc_z_residues(ELAGd,RDMd,INTEGd,y_ij,y_ab)
-   sum_tmp=sum_tmp+eight*dsqrt(sum(RDMd%tz_residue(:,:)**two)) 
-   ! -step
-   RDMd%z_pccd_old(iorb,iorb1)=RDMd%z_pccd_old(iorb,iorb1)-two*step
-   call calc_z_residues(ELAGd,RDMd,INTEGd,y_ij,y_ab)
-   sum_tmp=sum_tmp-eight*dsqrt(sum(RDMd%tz_residue(:,:)**two))
-   ! -2*step
-   RDMd%z_pccd_old(iorb,iorb1)=RDMd%z_pccd_old(iorb,iorb1)-step
-   call calc_z_residues(ELAGd,RDMd,INTEGd,y_ij,y_ab)
-   sum_tmp=sum_tmp+dsqrt(sum(RDMd%tz_residue(:,:)**two))
-   ! Save the gradient
-   Grad_res_tmp(iorb,iorb1)=sum_tmp/(twelve*step) 
-   ! Recover z_pccd_old
-   RDMd%z_pccd_old(iorb,iorb1)=saved_z
-  enddo
- enddo
- 
- Grad_residue=reshape(Grad_res_tmp,(/RDMd%Namplitudes/))
-
- deallocate(Grad_res_tmp)
-
-end subroutine num_calc_Grad_z_amp
-!!***
+! subroutine num_calc_Grad_z_amp(ELAGd,RDMd,INTEGd,y_ij,y_ab,Grad_residue) 
+! !Arguments ------------------------------------
+! !scalars
+!  type(elag_t),intent(inout)::ELAGd
+!  type(rdm_t),intent(inout)::RDMd
+!  type(integ_t),intent(inout)::INTEGd
+! !arrays
+!  real(dp),dimension(RDMd%Namplitudes)::Grad_residue
+!  real(dp),dimension(RDMd%Npairs,RDMd%Npairs)::y_ij
+!  real(dp),dimension(RDMd%NBF_occ-(RDMd%Nfrozen+RDMd%Npairs),RDMd%NBF_occ-(RDMd%Nfrozen+RDMd%Npairs))::y_ab
+! !Local variables ------------------------------
+! !scalars
+!  integer::iorb,iorb1
+!  real(dp)::saved_z,sum_tmp,step=tol6
+! !arrays
+!  real(dp),allocatable,dimension(:,:)::Grad_res_tmp
+! !************************************************************************
+!  
+!  allocate(Grad_res_tmp(RDMd%Npairs,RDMd%NBF_occ-(RDMd%Nfrozen+RDMd%Npairs)))
+!  Grad_res_tmp=zero
+! 
+!  do iorb=1,RDMd%Npairs
+!   do iorb1=1,RDMd%NBF_occ-(RDMd%Nfrozen+RDMd%Npairs)
+!    saved_z=RDMd%z_pccd_old(iorb,iorb1)
+!    ! 2*step
+!    RDMd%z_pccd_old(iorb,iorb1)=RDMd%z_pccd_old(iorb,iorb1)+two*step
+!    call calc_z_residues(ELAGd,RDMd,INTEGd,y_ij,y_ab)
+!    sum_tmp=-dsqrt(sum(RDMd%tz_residue(:,:)**two))
+!    ! step
+!    RDMd%z_pccd_old(iorb,iorb1)=RDMd%z_pccd_old(iorb,iorb1)-step
+!    call calc_z_residues(ELAGd,RDMd,INTEGd,y_ij,y_ab)
+!    sum_tmp=sum_tmp+eight*dsqrt(sum(RDMd%tz_residue(:,:)**two)) 
+!    ! -step
+!    RDMd%z_pccd_old(iorb,iorb1)=RDMd%z_pccd_old(iorb,iorb1)-two*step
+!    call calc_z_residues(ELAGd,RDMd,INTEGd,y_ij,y_ab)
+!    sum_tmp=sum_tmp-eight*dsqrt(sum(RDMd%tz_residue(:,:)**two))
+!    ! -2*step
+!    RDMd%z_pccd_old(iorb,iorb1)=RDMd%z_pccd_old(iorb,iorb1)-step
+!    call calc_z_residues(ELAGd,RDMd,INTEGd,y_ij,y_ab)
+!    sum_tmp=sum_tmp+dsqrt(sum(RDMd%tz_residue(:,:)**two))
+!    ! Save the gradient
+!    Grad_res_tmp(iorb,iorb1)=sum_tmp/(twelve*step) 
+!    ! Recover z_pccd_old
+!    RDMd%z_pccd_old(iorb,iorb1)=saved_z
+!   enddo
+!  enddo
+!  
+!  Grad_residue=reshape(Grad_res_tmp,(/RDMd%Namplitudes/))
+! 
+!  deallocate(Grad_res_tmp)
+! 
+! end subroutine num_calc_Grad_z_amp
+! !!***
 
 !!***
 !!****f* DoNOF/calc_t_residues
