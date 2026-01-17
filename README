@@ -106,4 +106,4 @@ As a library:
 
   nm -D libnoft.so | grep run_noft_c  
 
-  shoudl not be an empty output in the terminal
+  should not be an empty output in the terminal
