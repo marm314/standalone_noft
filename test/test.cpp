@@ -6,11 +6,12 @@
 
 using namespace std;
 
+int NBF_tot,NBF_tot2,NBF_tot3;
 double *hCORE,*ERI;
 
 int main(int argc, char *argv[])
 {
- int INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect;
+ int INOF,Ista,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect;
  int imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis;
  int restart,ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,iNOTupdateOCC,iNOTupdateORB;
  int iguess;
@@ -38,6 +39,8 @@ int main(int argc, char *argv[])
  Nalpha_elect=atoi(argv[3]);
  iguess=atoi(argv[4]);
  restart=atoi(argv[5]);
+ NBF_tot2=NBF_tot*NBF_tot;
+ NBF_tot3=NBF_tot2*NBF_tot;
  NBF_occ=NBF_tot;
  Nbeta_elect=Nalpha_elect;
  Npairs=(Nbeta_elect+Nalpha_elect)/2;
@@ -103,13 +106,12 @@ int main(int argc, char *argv[])
 
 extern "C" void coef_2_hcore(double *NO_COEF_v,int *NBF)
 {
-
+ 
 }
 
 extern "C" void hcore_ij(int *iorb,int *jorb,double *hVal)
 {
-
-
+ hVal[0]=hCORE[ (iorb[0]-1) + (jorb[0]-1)*NBF_tot ];
 }
 
 extern "C" void coef_2_ERI(double *NO_COEF_v,int *NBF)
@@ -119,7 +121,6 @@ extern "C" void coef_2_ERI(double *NO_COEF_v,int *NBF)
 
 extern "C" void ERI_ijkl(int *iorb,int *jorb,int *korb,int *lorb,double *EVal)
 {
-
-
+ EVal[0]=ERI[ (iorb[0]-1) + (jorb[0]-1)*NBF_tot + (korb[0]-1)*NBF_tot2 + (lorb[0]-1)*NBF_tot3 ];
 }
 
