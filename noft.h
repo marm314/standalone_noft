@@ -11,8 +11,8 @@ extern "C" {
                  int *ireadFdiag, int *iNOTupdateocc,int *iNOTupdateORB);
  void coef_2_hcore(double *NO_COEF_v,int *NBF);
  void coef_2_ERI(double *NO_COEF_v,int *NBF);
- void hcore_ij(int *iorb,int *jorb,double *hVal);
- void ERI_ijkl(int *iorb,int *jorb,int *korb,int *lorb,double *EVal);
+ void hcore_ij(int *iorb,int *jorb,int *NBF,double *hVal);
+ void ERI_ijkl(int *iorb,int *jorb,int *korb,int *lorb,int *NBF,double *EVal);
   
 }
 
