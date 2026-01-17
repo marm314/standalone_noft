@@ -24,8 +24,8 @@ testF90:
 	gfortran -O2 -llapack -lblas *.o test.F90 -o test.x
 	gfortran -O2 -llapack -lblas *.o test2.F90 -o test2.x
 testCpp:
-	g++ -O2 ${HOME}/Installers/standalone_noft/standalone_donof/test/test.cpp \
-	-L${HOME}/Installers/standalone_noft/standalone_donof \
+	g++ -O2 test.cpp \
+	-L./../ \
 	-lnoft -llapack -lblas \
 	-Wl,-rpath,'../' \
 	-o testc.x	
