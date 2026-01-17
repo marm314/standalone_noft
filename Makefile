@@ -49,4 +49,4 @@ module:
 clean:
 	/bin/rm -rf *.o *.mod gitver.F90 libnoft.so
 tar:
-	tar -cvf module_noft.tar *F90 *F README test libnoft.so
+	tar -cvf module_noft.tar *F90 *F *h README test 
