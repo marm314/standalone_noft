@@ -68,8 +68,8 @@ contains
 !! SOURCE
 
 subroutine run_noft_c(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect, &
-&  imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,Enof,tolE,Vnn,     &
-&  Occ,NO_COEF_in,restart,ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,iNOTupdateocc,iNOTupdateORB) bind(C,name="run_noft_c")
+&  imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,Enof,tolE,Vnn,Occ, &
+&  Overlap_in,NO_COEF_in,restart,ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,iNOTupdateocc,iNOTupdateORB) bind(C,name="run_noft_c")
  use m_definitions
  implicit none
 !Arguments ------------------------------------
@@ -83,6 +83,7 @@ subroutine run_noft_c(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_el
  real(c_double),intent(inout)::Enof
 !arrays
  real(c_double),dimension(NBF_tot),intent(inout)::Occ
+ real(c_double),dimension(NBF_tot*NBF_tot),intent(inout)::Overlap_in
  real(c_double),dimension(NBF_tot*NBF_tot),intent(inout)::NO_COEF_in
 !Local variables ------------------------------
 !scalars
@@ -98,6 +99,13 @@ subroutine run_noft_c(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_el
 !************************************************************************
  
  ofile_name='tmp.noft'
+
+write(*,*) INOF,Npairs
+do iorb=1,NBF_tot
+ do jorb=1,NBF_tot
+  write(*,*) iorb,jorb,NO_COEF_in(jorb+NBF_tot*(iorb-1))
+ enddo
+enddo
 write(*,*) 'Hello fortran'
 goto 111
  ! Allocate and initialize arrays
@@ -105,8 +113,10 @@ goto 111
  allocate(hCORE_in(NBF_tot,NBF_tot),ERI_in(NBF_tot,NBF_tot,NBF_tot,NBF_tot))
  Overlap=zero;NO_COEF=zero;hCORE_in=zero;ERI_in=zero;
  do iorb=1,NBF_tot
-  Overlap(iorb,iorb)=one
   NO_COEF(iorb,iorb)=one
+  do jorb=1,NBF_tot
+   Overlap(jorb,iorb)=Overlap_in(jorb+NBF_tot*(iorb-1))
+  enddo
  enddo
 
  ! Read the FCIDUMP
@@ -220,7 +230,7 @@ subroutine mo_ints_c(NBF_tot, NBF_occ, NBF_jkl, Occ, DM2_JK, NO_COEF, hCORE, ERI
  complex(dp), optional, intent(inout) :: ERImolLsr_cmplx(NBF_tot, NBF_jkl, NBF_jkl)
 !Local variables ------------------------------
 !scalars
- integer(c_int)::iorb,jorb,korb,NBF
+ integer(c_int)::iorb,jorb,korb,lorb,NBF
  real(c_double)::Val
  interface
   subroutine coef_2_hcore(NO_COEF_v,NBF) bind(C,name="coef_2_hcore")
@@ -228,10 +238,23 @@ subroutine mo_ints_c(NBF_tot, NBF_occ, NBF_jkl, Occ, DM2_JK, NO_COEF, hCORE, ERI
   real(c_double),dimension(*)::NO_COEF_v
   integer(c_int), value :: NBF
   end subroutine
-  subroutine hcore_ijkl(iorb,jorb,Val) bind(C,name="hcore_ijkl")
+  subroutine coef_2_ERI(NO_COEF_v,NBF) bind(C,name="coef_2_ERI")
+  use iso_c_binding
+  real(c_double),dimension(*)::NO_COEF_v
+  integer(c_int), value :: NBF
+  end subroutine
+  subroutine hcore_ij(iorb,jorb,Val) bind(C,name="hcore_ij")
   use iso_c_binding
   integer(c_int), value :: iorb
   integer(c_int), value :: jorb
+  real(c_double), value :: Val
+  end subroutine
+  subroutine ERI_ijkl(iorb,jorb,korb,lorb,Val) bind(C,name="ERI_ijkl")
+  use iso_c_binding
+  integer(c_int), value :: iorb
+  integer(c_int), value :: jorb
+  integer(c_int), value :: korb
+  integer(c_int), value :: lorb
   real(c_double), value :: Val
   end subroutine
  end interface
@@ -281,15 +304,24 @@ subroutine mo_ints_c(NBF_tot, NBF_occ, NBF_jkl, Occ, DM2_JK, NO_COEF, hCORE, ERI
  call coef_2_hcore(NO_COEF_vec,NBF)
  do iorb=1,NBF_tot
   do jorb=1,NBF_tot
-   call hcore_ijkl(iorb,jorb,Val)
+   call hcore_ij(iorb,jorb,Val)
    hCORE(iorb,jorb)=Val 
   enddo
  enddo
- hCORE=matmul(transpose(NO_COEF),matmul(hCORE_in,NO_COEF))
+ !hCORE=matmul(transpose(NO_COEF),matmul(hCORE_in,NO_COEF))
 
  ! Transformation of ERI
- ERImol=ERI_in
-! call transformERI(NBF_tot,NO_COEF,ERImol) ! MO -> New NOs.
+ call coef_2_ERI(NO_COEF_vec,NBF)
+ do iorb=1,NBF_tot
+  do jorb=1,NBF_jkl
+   do korb=1,NBF_jkl
+    do lorb=1,NBF_jkl
+     call ERI_ijkl(iorb,jorb,korb,lorb,Val)
+     ERImol(iorb,jorb,korb,lorb)=Val
+    enddo
+   enddo
+  enddo
+ enddo
 
  ! Deallocate arrays
  deallocate(NO_COEF_vec)
