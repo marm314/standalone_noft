@@ -45,3 +45,6 @@ neg_U/
 fcidump/
 test/paul_fcidump/
 module_noft.tar
+test/rep_U/
+test/test_3imp/
+test/test_U_ensembleHF/
