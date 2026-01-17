@@ -48,3 +48,8 @@ module_noft.tar
 test/rep_U/
 test/test_3imp/
 test/test_U_ensembleHF/
+libnoft.so
+m_fcidump_c.mod
+m_noft_driver_c.mod
+test/testc.x
+m_noft_driver_c.o
