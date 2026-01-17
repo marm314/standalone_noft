@@ -93,3 +93,17 @@ Example:
 Warning: 
 
   The current version does not support spin-uncompensated systems (under development).
+
+
+As a library:
+-------------
+
+  Remember to ad the PATH of libnoft.so to the library path.
+
+  export LD_LIBRARY_PATH=$LIBRARY_PATH:$HOME/../
+
+  Also, is good to check that the library contains the linker subroutine
+
+  nm -D libnoft.so | grep run_noft_c  
+
+  shoudl not be an empty output in the terminal
