@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
  int INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect;
  int imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis;
  int restart,ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,iNOTupdateOCC,iNOTupdateORB;
- int iguess;
+ int iguess,ifort_fcidump;
  int iorb,jorb,korb;
  double Enof,tolE,Vnn;
  double *Occ,*NO_COEF,*Overlap;
@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
  INOF=8;Ista=0;NBF_tot=0;NBF_occ=0;
  Nfrozen=0;Npairs=0;Ncoupled=1;Nbeta_elect=0;Nalpha_elect=0;
  imethocc=1;imethorb=1;itermax=10000;iprintdmn=0;iprintswdmn=0;iprintints=0;
- itolLambda=5;ndiis=5;restart=0;
+ itolLambda=5;ndiis=5;restart=0;ifort_fcidump=0;
  tolE=1e-9;Vnn=zero;Enof=zero;
 
 cout<<"Iter 3"<<endl;
@@ -149,7 +149,7 @@ itermax=3;
  run_noft_c(&INOF,&Ista,&NBF_tot,&NBF_occ,&Nfrozen,&Npairs,&Ncoupled,&Nbeta_elect,&Nalpha_elect,
             &imethocc,&imethorb,&itermax,&iprintdmn,&iprintswdmn,&iprintints,&itolLambda,&ndiis,
             &Enof,&tolE,&Vnn,Occ,Overlap,NO_COEF,&restart,&ireadGAMMAS,&ireadOCC,&ireadCOEF,
-            &ireadFdiag,&iNOTupdateOCC,&iNOTupdateORB);
+            &ireadFdiag,&iNOTupdateOCC,&iNOTupdateORB,&ifort_fcidump);
 
  // Print results
  cout<<endl;

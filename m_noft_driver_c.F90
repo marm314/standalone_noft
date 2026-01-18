@@ -14,8 +14,13 @@ module m_noft_driver_c
 
  use iso_c_binding
  use m_noft_driver
+ use m_definitions
 
  implicit none
+
+ logical::fort_fcidump=.false.
+ real(dp),allocatable,dimension(:,:)::hCORE_IN_FOR
+ real(dp),allocatable,dimension(:,:,:,:)::ERI_IN_FOR
 
 !!***
 
@@ -45,12 +50,13 @@ contains
 
 subroutine run_noft_c(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect, &
 &  imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,Enof,tolE,Vnn,Occ, &
-&  Overlap_in,NO_COEF_in,restart,ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,iNOTupdateocc,iNOTupdateORB) bind(C,name="run_noft_c")
+&  Overlap_in,NO_COEF_in,restart,ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,iNOTupdateocc,iNOTupdateORB, &
+&  ifort_fcidump) bind(C,name="run_noft_c")
  use m_definitions
  implicit none
 !Arguments ------------------------------------
 !scalars
- integer(c_int),intent(in)::restart
+ integer(c_int),intent(in)::restart,ifort_fcidump
  integer(c_int),intent(in)::ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,iNOTupdateocc,iNOTupdateORB
  integer(c_int),intent(in)::INOF,Ista,imethocc,imethorb,itermax,iprintdmn,iprintints,iprintswdmn
  integer(c_int),intent(in)::NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,itolLambda,ndiis  
@@ -73,6 +79,9 @@ subroutine run_noft_c(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_el
  
  ofile_name='tmp.noft'
 
+ ! Decide whether to use C++ or Fortran to perform integrals transformation
+ if(ifort_fcidump==1) fort_fcidump=.true.
+  
  ! Allocate and initialize arrays
  allocate(Overlap(NBF_tot,NBF_tot),NO_COEF(NBF_tot,NBF_tot))
  Overlap=zero;NO_COEF=zero;
@@ -208,32 +217,6 @@ subroutine mo_ints_c(NBF_tot, NBF_occ, NBF_jkl, Occ, DM2_JK, NO_COEF, hCORE, ERI
   enddo
  enddo
 
- ! 'Use' the unsed variables to avoid warnings!
- if(Occ(1)==one) then
- endif
- if(present(all_ERIs)) then
- endif
- if(present(DM2_JK)) then
- endif
- if(present(do_xc_dft)) then
- endif
- if(present(Edft_xc)) then
- endif
- if(present(ERImolJsr)) then
- endif
- if(present(ERImolLsr)) then
- endif
- if(present(ERImolJsr_cmplx)) then
- endif
- if(present(ERImolLsr_cmplx)) then
- endif
- if(present(hCORE_cmplx)) then
- endif
- if(present(ERImol_cmplx)) then
- endif
- if(present(NO_COEF_cmplx)) then
- endif
-
  ! Transformation of hCORE
  call coef_2_hcore(NO_COEF_vec,NBF)
  do iorb=1,NBF_tot
@@ -264,6 +247,32 @@ subroutine mo_ints_c(NBF_tot, NBF_occ, NBF_jkl, Occ, DM2_JK, NO_COEF, hCORE, ERI
 
  ! Deallocate arrays
  deallocate(NO_COEF_vec)
+
+ ! 'Use' the unsed variables to avoid warnings!
+ if(Occ(1)==one) then
+ endif
+ if(present(all_ERIs)) then
+ endif
+ if(present(DM2_JK)) then
+ endif
+ if(present(do_xc_dft)) then
+ endif
+ if(present(Edft_xc)) then
+ endif
+ if(present(ERImolJsr)) then
+ endif
+ if(present(ERImolLsr)) then
+ endif
+ if(present(ERImolJsr_cmplx)) then
+ endif
+ if(present(ERImolLsr_cmplx)) then
+ endif
+ if(present(hCORE_cmplx)) then
+ endif
+ if(present(ERImol_cmplx)) then
+ endif
+ if(present(NO_COEF_cmplx)) then
+ endif
 
 end subroutine mo_ints_c
 !!***
