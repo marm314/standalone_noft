@@ -55,18 +55,25 @@ int main(int argc, char *argv[])
  Occ=new double[NBF_tot];
  NO_COEF=new double[NBF_tot*NBF_tot];
  Overlap=new double[NBF_tot*NBF_tot];
+ hCORE=new double[NBF_tot*NBF_tot];
+ ERI=new double[NBF_tot*NBF_tot*NBF_tot*NBF_tot];
  for(iorb=0;iorb<NBF_tot;iorb++) // The overlap matrix is the identity
  {
   Occ[iorb]=zero;
-  if(iorb<Npairs) Occ[iorb]=Occ[iorb]=one;
+  if(iorb<Npairs) Occ[iorb]=one;
   for(jorb=0;jorb<NBF_tot;jorb++)
   {
+   hCORE[jorb+NBF_tot*iorb]=zero;
    Overlap[jorb+NBF_tot*iorb]=zero;
    if(iorb==jorb)
    {
     Overlap[iorb+NBF_tot*iorb]=one;
    }
   }
+ }
+ for(iorb=0;iorb<NBF_tot*NBF_tot*NBF_tot*NBF_tot;iorb++)
+ {
+  ERI[iorb]=zero;
  }
  if(iguess==0)  // Hcore basis
  {
@@ -98,6 +105,8 @@ int main(int argc, char *argv[])
  delete[] Occ;Occ=NULL;
  delete[] NO_COEF;NO_COEF=NULL;
  delete[] Overlap;Overlap=NULL;
+ delete[] hCORE;hCORE=NULL;
+ delete[] ERI;ERI=NULL;
  return 0;
 }
 
