@@ -73,26 +73,18 @@ subroutine run_noft_c(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_el
  
  ofile_name='tmp.noft'
 
-write(*,*) INOF,Npairs
-do iorb=1,NBF_tot
- do jorb=1,NBF_tot
-  write(*,*) iorb,jorb,NO_COEF_in(jorb+NBF_tot*(iorb-1))
- enddo
-enddo
-write(*,*) 'Hello fortran'
-goto 111
  ! Allocate and initialize arrays
  allocate(Overlap(NBF_tot,NBF_tot),NO_COEF(NBF_tot,NBF_tot))
  Overlap=zero;NO_COEF=zero;
  do iorb=1,NBF_tot
-  NO_COEF(iorb,iorb)=one
   do jorb=1,NBF_tot
    Overlap(jorb,iorb)=Overlap_in(jorb+NBF_tot*(iorb-1))
+   NO_COEF(jorb,iorb)=NO_COEF_in(jorb+NBF_tot*(iorb-1))
   enddo
  enddo
 
  ! Call the run_noft module
- if(restart/=1) then
+ if(restart==0) then
    write(*,*) 'running NOFT module'
    call run_noft(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect, &
   &   imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,           &
@@ -118,7 +110,6 @@ goto 111
  ! Deallocate arrays
  deallocate(Overlap,NO_COEF)
 
-111 continue
 end subroutine run_noft_c
 !!***
 
@@ -250,10 +241,9 @@ subroutine mo_ints_c(NBF_tot, NBF_occ, NBF_jkl, Occ, DM2_JK, NO_COEF, hCORE, ERI
   do jorb=1,NBF_tot
    jjorb=jorb
    call hcore_ij(iiorb,jjorb,NBF,Val)
-   hCORE(iorb,jorb)=Val 
+   hCORE(iorb,jorb)=Val
   enddo
  enddo
- !hCORE=matmul(transpose(NO_COEF),matmul(hCORE_in,NO_COEF))
 
  ! Transformation of ERI
  call coef_2_ERI(NO_COEF_vec,NBF)
