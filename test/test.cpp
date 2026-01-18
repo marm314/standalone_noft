@@ -36,9 +36,6 @@ int main(int argc, char *argv[])
  itolLambda=5;ndiis=5;restart=0;ifort_fcidump=0;
  tolE=1e-9;Vnn=zero;Enof=zero;
 
-cout<<"Iter 3"<<endl;
-itermax=3;
-
  if(argc!=7)
  {
   cout<<" Include the arguments:"<<endl;
@@ -183,7 +180,39 @@ itermax=3;
 
 extern "C" void coef_2_hcore(double *NO_COEF_v,int *NBF)
 {
- cout<<"Hcore called from Fortran"<<endl; 
+ int iorb,jorb,korb,porb,NBF1,NBF2;
+ double *hCORE_tmp;
+ NBF1=NBF[0];
+ NBF2=NBF1*NBF1;
+ hCORE_tmp=new double[NBF2];
+ //
+ // Full change: h_kp -> h_ji
+ //
+ // h_kp -> h_jp
+ for(jorb=0;jorb<NBF1;jorb++)
+ {
+  for(porb=0;porb<NBF1;porb++)
+  {
+   hCORE_tmp[jorb+porb*NBF1]=zero;
+   for(korb=0;korb<NBF1;korb++)
+   {
+    hCORE_tmp[jorb+porb*NBF1]+=NO_COEF_v[korb+jorb*NBF1]*hCORE_init[korb+porb*NBF1];
+   }
+  }
+ }
+ // h_jp -> h_ji
+ for(jorb=0;jorb<NBF1;jorb++)
+ {
+  for(iorb=0;iorb<NBF1;iorb++)
+  {
+   hCORE_tran[jorb+iorb*NBF1]=zero;
+   for(porb=0;porb<NBF1;porb++)
+   {
+    hCORE_tran[jorb+iorb*NBF1]+=NO_COEF_v[porb+iorb*NBF1]*hCORE_tmp[jorb+porb*NBF1];
+   }
+  }
+ }
+ delete[] hCORE_tmp;hCORE_tmp=NULL;
 }
 
 extern "C" void hcore_ij(int *iorb,int *jorb,int *NBF,double *hVal)
@@ -193,7 +222,89 @@ extern "C" void hcore_ij(int *iorb,int *jorb,int *NBF,double *hVal)
 
 extern "C" void coef_2_ERI(double *NO_COEF_v,int *NBF)
 {
- cout<<"ERI called from Fortran"<<endl; 
+ int iorb,jorb,korb,lorb,porb,qorb,rorb,sorb,NBF1,NBF2,NBF3,NBF4;
+ double *ERI_tmp;
+ NBF1=NBF[0];
+ NBF2=NBF1*NBF1;
+ NBF3=NBF2*NBF1;
+ NBF4=NBF3*NBF1;
+ ERI_tmp=new double[NBF4];
+ //
+ // Full change: <ij|kl> -> <pq|rs>
+ //
+ // <ij|kl> -> <pj|kl>
+ for(porb=0;porb<NBF1;porb++)
+ {
+  for(jorb=0;jorb<NBF1;jorb++)
+  {
+   for(korb=0;korb<NBF1;korb++)
+   {
+    for(lorb=0;lorb<NBF1;lorb++)
+    {
+     ERI_tmp[porb+jorb*NBF1+korb*NBF2+lorb*NBF3]=zero;
+     for(iorb=0;iorb<NBF1;iorb++)
+     {
+      ERI_tmp[porb+jorb*NBF1+korb*NBF2+lorb*NBF3]+=NO_COEF_v[iorb+porb*NBF1]*ERI_init[iorb+jorb*NBF1+korb*NBF2+lorb*NBF3];
+     }
+    }
+   }
+  }
+ } 
+ // <pj|kl> -> <pq|kl>
+ for(porb=0;porb<NBF1;porb++)
+ {
+  for(qorb=0;qorb<NBF1;qorb++)
+  {
+   for(korb=0;korb<NBF1;korb++)
+   {
+    for(lorb=0;lorb<NBF1;lorb++)
+    {
+     ERI_tran[porb+qorb*NBF1+korb*NBF2+lorb*NBF3]=zero;
+     for(jorb=0;jorb<NBF1;jorb++)
+     {
+      ERI_tran[porb+qorb*NBF1+korb*NBF2+lorb*NBF3]+=NO_COEF_v[jorb+qorb*NBF1]*ERI_tmp[porb+jorb*NBF1+korb*NBF2+lorb*NBF3];
+     }
+    }
+   }
+  }
+ }
+ // <pq|kl> -> <pq|rl>
+ for(porb=0;porb<NBF1;porb++)
+ {
+  for(qorb=0;qorb<NBF1;qorb++)
+  {
+   for(rorb=0;rorb<NBF1;rorb++)
+   {
+    for(lorb=0;lorb<NBF1;lorb++)
+    {
+     ERI_tmp[porb+qorb*NBF1+rorb*NBF2+lorb*NBF3]=zero;
+     for(korb=0;korb<NBF1;korb++)
+     {
+      ERI_tmp[porb+qorb*NBF1+rorb*NBF2+lorb*NBF3]+=NO_COEF_v[korb+rorb*NBF1]*ERI_tran[porb+qorb*NBF1+korb*NBF2+lorb*NBF3];
+     }
+    }
+   }
+  }
+ }
+ // <pq|rl> -> <pq|rs>
+ for(porb=0;porb<NBF1;porb++)
+ {
+  for(qorb=0;qorb<NBF1;qorb++)
+  {
+   for(rorb=0;rorb<NBF1;rorb++)
+   {
+    for(sorb=0;sorb<NBF1;sorb++)
+    {
+     ERI_tran[porb+qorb*NBF1+rorb*NBF2+sorb*NBF3]=zero;
+     for(lorb=0;lorb<NBF1;lorb++)
+     {
+      ERI_tran[porb+qorb*NBF1+rorb*NBF2+sorb*NBF3]+=NO_COEF_v[lorb+sorb*NBF1]*ERI_tmp[porb+qorb*NBF1+rorb*NBF2+lorb*NBF3];
+     }
+    }
+   }
+  }
+ }
+ delete[] ERI_tmp;ERI_tmp=NULL;
 }
 
 extern "C" void ERI_ijkl(int *iorb,int *jorb,int *korb,int *lorb,int *NBF,double *EVal)
