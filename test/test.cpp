@@ -15,7 +15,8 @@ void read_fcidump(int &NBF_tot,double &Vnn);
 void jacobi_donof(int n, double **m, double **v);
 void sort_donof(int n, double **m, double **v);
 int type;
-double *hCORE,*ERI;
+double *hCORE_init,*ERI_init; // Read from FCIDUMP
+double *hCORE_tran,*ERI_tran;       // Transformed
 
 int main(int argc, char *argv[])
 {
@@ -69,15 +70,18 @@ itermax=3;
  Occ=new double[NBF_tot];
  NO_COEF=new double[NBF_tot*NBF_tot];
  Overlap=new double[NBF_tot*NBF_tot];
- hCORE=new double[NBF_tot*NBF_tot];
- ERI=new double[NBF_tot*NBF_tot*NBF_tot*NBF_tot];
+ hCORE_tran=new double[NBF_tot*NBF_tot];
+ hCORE_init=new double[NBF_tot*NBF_tot];
+ ERI_tran=new double[NBF_tot*NBF_tot*NBF_tot*NBF_tot];
+ ERI_init=new double[NBF_tot*NBF_tot*NBF_tot*NBF_tot];
  for(iorb=0;iorb<NBF_tot;iorb++) // The overlap matrix is the identity
  {
   Occ[iorb]=zero;
   if(iorb<Npairs) Occ[iorb]=one;
   for(jorb=0;jorb<NBF_tot;jorb++)
   {
-   hCORE[jorb+NBF_tot*iorb]=zero;
+   hCORE_tran[jorb+NBF_tot*iorb]=zero;
+   hCORE_init[jorb+NBF_tot*iorb]=zero;
    Overlap[jorb+NBF_tot*iorb]=zero;
    if(iorb==jorb)
    {
@@ -87,7 +91,8 @@ itermax=3;
  }
  for(iorb=0;iorb<NBF_tot*NBF_tot*NBF_tot*NBF_tot;iorb++)
  {
-  ERI[iorb]=zero;
+  ERI_tran[iorb]=zero;
+  ERI_init[iorb]=zero;
  }
 
  // Read the FCIDUMP file
@@ -104,7 +109,7 @@ itermax=3;
    TMP_MAT[iorb]=new double[NBF_tot];
    for(jorb=0;jorb<NBF_tot;jorb++)
    {
-    TMP_MAT[iorb][jorb]=hCORE[iorb+jorb*NBF_tot];
+    TMP_MAT[iorb][jorb]=hCORE_init[iorb+jorb*NBF_tot];
     Cguess[iorb][jorb]=zero;
    }
   }
@@ -169,8 +174,10 @@ itermax=3;
  delete[] Occ;Occ=NULL;
  delete[] NO_COEF;NO_COEF=NULL;
  delete[] Overlap;Overlap=NULL;
- delete[] hCORE;hCORE=NULL;
- delete[] ERI;ERI=NULL;
+ delete[] hCORE_tran;hCORE_tran=NULL;
+ delete[] hCORE_init;hCORE_init=NULL;
+ delete[] ERI_tran;ERI_tran=NULL;
+ delete[] ERI_init;ERI_init=NULL;
  return 0;
 }
 
@@ -181,7 +188,7 @@ extern "C" void coef_2_hcore(double *NO_COEF_v,int *NBF)
 
 extern "C" void hcore_ij(int *iorb,int *jorb,int *NBF,double *hVal)
 {
- hVal[0]=hCORE[ (iorb[0]-1) + (jorb[0]-1)*NBF[0] ];
+ hVal[0]=hCORE_tran[ (iorb[0]-1) + (jorb[0]-1)*NBF[0] ];
 }
 
 extern "C" void coef_2_ERI(double *NO_COEF_v,int *NBF)
@@ -194,7 +201,7 @@ extern "C" void ERI_ijkl(int *iorb,int *jorb,int *korb,int *lorb,int *NBF,double
  int NBF2,NBF3;
  NBF2=NBF[0]*NBF[0];
  NBF3=NBF2*NBF[0];
- EVal[0]=ERI[ (iorb[0]-1) + (jorb[0]-1)*NBF[0] + (korb[0]-1)*NBF2 + (lorb[0]-1)*NBF3 ];
+ EVal[0]=ERI_tran[ (iorb[0]-1) + (jorb[0]-1)*NBF[0] + (korb[0]-1)*NBF2 + (lorb[0]-1)*NBF3 ];
 }
 
 void read_fcidump(int &NBF_tot,double &Vnn)
@@ -224,19 +231,19 @@ void read_fcidump(int &NBF_tot,double &Vnn)
    if(iorb==0 && jorb==0 && korb==0 && lorb==0){Vnn=Val;}
    if(iorb!=0 && jorb!=0 && korb==0 && lorb==0)
    {
-    hCORE[ (iorb-1) + (jorb-1)*NBF_tot ]=Val;
-    hCORE[ (jorb-1) + (iorb-1)*NBF_tot ]=Val;
+    hCORE_init[ (iorb-1) + (jorb-1)*NBF_tot ]=Val;
+    hCORE_init[ (jorb-1) + (iorb-1)*NBF_tot ]=Val;
    }
    if(iorb!=-1 && jorb!=-1 && korb!=-1 && lorb!=-1 && iorb!=0 && jorb!=0 && korb!=0 && lorb!=0)
    {
-    ERI[ (iorb-1) + (korb-1)*NBF_tot + (jorb-1)*NBF_tot*NBF_tot + (lorb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
-    ERI[ (iorb-1) + (lorb-1)*NBF_tot + (jorb-1)*NBF_tot*NBF_tot + (korb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
-    ERI[ (jorb-1) + (lorb-1)*NBF_tot + (iorb-1)*NBF_tot*NBF_tot + (korb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
-    ERI[ (jorb-1) + (korb-1)*NBF_tot + (iorb-1)*NBF_tot*NBF_tot + (lorb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
-    ERI[ (korb-1) + (iorb-1)*NBF_tot + (lorb-1)*NBF_tot*NBF_tot + (jorb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
-    ERI[ (lorb-1) + (iorb-1)*NBF_tot + (korb-1)*NBF_tot*NBF_tot + (jorb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
-    ERI[ (lorb-1) + (jorb-1)*NBF_tot + (korb-1)*NBF_tot*NBF_tot + (iorb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
-    ERI[ (korb-1) + (jorb-1)*NBF_tot + (lorb-1)*NBF_tot*NBF_tot + (iorb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
+    ERI_init[ (iorb-1) + (korb-1)*NBF_tot + (jorb-1)*NBF_tot*NBF_tot + (lorb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
+    ERI_init[ (iorb-1) + (lorb-1)*NBF_tot + (jorb-1)*NBF_tot*NBF_tot + (korb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
+    ERI_init[ (jorb-1) + (lorb-1)*NBF_tot + (iorb-1)*NBF_tot*NBF_tot + (korb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
+    ERI_init[ (jorb-1) + (korb-1)*NBF_tot + (iorb-1)*NBF_tot*NBF_tot + (lorb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
+    ERI_init[ (korb-1) + (iorb-1)*NBF_tot + (lorb-1)*NBF_tot*NBF_tot + (jorb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
+    ERI_init[ (lorb-1) + (iorb-1)*NBF_tot + (korb-1)*NBF_tot*NBF_tot + (jorb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
+    ERI_init[ (lorb-1) + (jorb-1)*NBF_tot + (korb-1)*NBF_tot*NBF_tot + (iorb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
+    ERI_init[ (korb-1) + (jorb-1)*NBF_tot + (lorb-1)*NBF_tot*NBF_tot + (iorb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
    }
   }while(iorb!=-1 && jorb!=-1 && korb!=-1 && lorb!=-1);
  }
@@ -248,19 +255,19 @@ void read_fcidump(int &NBF_tot,double &Vnn)
    if(iorb==0 && jorb==0 && korb==0 && lorb==0){Vnn=Val;}
    if(iorb!=0 && jorb!=0 && korb==0 && lorb==0)
    {
-    hCORE[ (iorb-1) + (jorb-1)*NBF_tot ]=Val;
-    hCORE[ (jorb-1) + (iorb-1)*NBF_tot ]=Val;
+    hCORE_init[ (iorb-1) + (jorb-1)*NBF_tot ]=Val;
+    hCORE_init[ (jorb-1) + (iorb-1)*NBF_tot ]=Val;
    }
    if(iorb!=-1 && jorb!=-1 && korb!=-1 && lorb!=-1 && iorb!=0 && jorb!=0 && korb!=0 && lorb!=0)
    {
-    ERI[ (iorb-1) + (korb-1)*NBF_tot + (jorb-1)*NBF_tot*NBF_tot + (lorb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
-    ERI[ (iorb-1) + (lorb-1)*NBF_tot + (jorb-1)*NBF_tot*NBF_tot + (korb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
-    ERI[ (jorb-1) + (lorb-1)*NBF_tot + (iorb-1)*NBF_tot*NBF_tot + (korb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
-    ERI[ (jorb-1) + (korb-1)*NBF_tot + (iorb-1)*NBF_tot*NBF_tot + (lorb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
-    ERI[ (korb-1) + (iorb-1)*NBF_tot + (lorb-1)*NBF_tot*NBF_tot + (jorb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
-    ERI[ (lorb-1) + (iorb-1)*NBF_tot + (korb-1)*NBF_tot*NBF_tot + (jorb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
-    ERI[ (lorb-1) + (jorb-1)*NBF_tot + (korb-1)*NBF_tot*NBF_tot + (iorb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
-    ERI[ (korb-1) + (jorb-1)*NBF_tot + (lorb-1)*NBF_tot*NBF_tot + (iorb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
+    ERI_init[ (iorb-1) + (korb-1)*NBF_tot + (jorb-1)*NBF_tot*NBF_tot + (lorb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
+    ERI_init[ (iorb-1) + (lorb-1)*NBF_tot + (jorb-1)*NBF_tot*NBF_tot + (korb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
+    ERI_init[ (jorb-1) + (lorb-1)*NBF_tot + (iorb-1)*NBF_tot*NBF_tot + (korb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
+    ERI_init[ (jorb-1) + (korb-1)*NBF_tot + (iorb-1)*NBF_tot*NBF_tot + (lorb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
+    ERI_init[ (korb-1) + (iorb-1)*NBF_tot + (lorb-1)*NBF_tot*NBF_tot + (jorb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
+    ERI_init[ (lorb-1) + (iorb-1)*NBF_tot + (korb-1)*NBF_tot*NBF_tot + (jorb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
+    ERI_init[ (lorb-1) + (jorb-1)*NBF_tot + (korb-1)*NBF_tot*NBF_tot + (iorb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
+    ERI_init[ (korb-1) + (jorb-1)*NBF_tot + (lorb-1)*NBF_tot*NBF_tot + (iorb-1)*NBF_tot*NBF_tot*NBF_tot ]=Val;
    }
   }while(iorb!=-1 && jorb!=-1 && korb!=-1 && lorb!=-1);
  }
