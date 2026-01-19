@@ -47,13 +47,13 @@ contains
 subroutine run_noft_c(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect, &
 &  imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,Enof,tolE,Vnn,Occ, &
 &  Overlap_in,NO_COEF_in,restart,ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,iNOTupdateocc,iNOTupdateORB, &
-&  ifort_fcidump) bind(C,name="run_noft_c")
+&  ifort_fcidump,iskip_fcidump,istyle_fcidump) bind(C,name="run_noft_c")
  use m_definitions
  use m_fcidump_nof
  implicit none
 !Arguments ------------------------------------
 !scalars
- integer(c_int),intent(in)::restart,ifort_fcidump
+ integer(c_int),intent(in)::restart,ifort_fcidump,iskip_fcidump,istyle_fcidump
  integer(c_int),intent(in)::ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,iNOTupdateocc,iNOTupdateORB
  integer(c_int),intent(in)::INOF,Ista,imethocc,imethorb,itermax,iprintdmn,iprintints,iprintswdmn
  integer(c_int),intent(in)::NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,itolLambda,ndiis  
@@ -76,9 +76,16 @@ subroutine run_noft_c(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_el
  
  ofile_name='tmp.noft'
 
- ! Decide whether to use C++ or Fortran to perform integrals transformation
+ ! If Fortran will perform integrals transformation
+ fort_fcidump=.false.
  if(ifort_fcidump==1) then
   fort_fcidump=.true.
+  iskip_nof=iskip_fcidump
+  standard_fcidump=(istyle_fcidump==0)  
+  allocate(hCORE_IN_NOF(NBF_tot,NBF_tot),ERI_IN_NOF(NBF_tot,NBF_tot,NBF_tot,NBF_tot))
+  hCORE_IN_NOF=0d0;ERI_IN_NOF=0d0;
+  call read_fcidump_NOF()
+  Vnn=Vnn_nof
  endif
   
  ! Allocate and initialize arrays

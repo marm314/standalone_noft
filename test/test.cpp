@@ -23,24 +23,25 @@ int main(int argc, char *argv[])
  int INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect;
  int imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis;
  int restart,ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,iNOTupdateOCC,iNOTupdateORB;
- int iguess,ifort_fcidump;
+ int iguess,ifort_fcidump,iskip_fcidump,istyle_fcidump;
  int iorb,jorb,korb;
  double Enof,tolE,Vnn;
  double *Occ,*NO_COEF,*Overlap,*dm1;
  double **Cguess,**TMP_MAT;
+ string line;
 
  // Initialize variables
  INOF=8;Ista=0;NBF_tot=0;NBF_occ=0;
  Nfrozen=0;Npairs=0;Ncoupled=1;Nbeta_elect=0;Nalpha_elect=0;
  imethocc=1;imethorb=1;itermax=10000;iprintdmn=0;iprintswdmn=0;iprintints=0;
- itolLambda=5;ndiis=5;restart=0;ifort_fcidump=0;
+ itolLambda=5;ndiis=5;restart=0;ifort_fcidump=0;iskip_fcidump=0,istyle_fcidump=0;
  tolE=1e-9;Vnn=zero;Enof=zero;
 
- if(argc!=7)
+ if(argc!=8)
  {
   cout<<" Include the arguments:"<<endl;
   cout<<endl;
-  cout<<"  INOF(integer) Nbasis(integer) Nalpha_electrons(integer) iguess(0 Hcore, 1 init MO basis) restart(integer) fcidump_type(integer)"<<endl;
+  cout<<"  INOF(integer) Nbasis(integer) Nalpha_electrons(integer) iguess(0 Hcore, 1 init MO basis) restart(integer) fcidump_type(integer) fortran_fcidump(integer)"<<endl;
   cout<<endl;
   return 0;
  }
@@ -50,6 +51,7 @@ int main(int argc, char *argv[])
  iguess=atoi(argv[4]);
  restart=atoi(argv[5]);
  fcidump_type=atoi(argv[6]);
+ ifort_fcidump=atoi(argv[7]);
  NBF_occ=NBF_tot;
  Nbeta_elect=Nalpha_elect;
  Npairs=(Nbeta_elect+Nalpha_elect)/2;
@@ -61,6 +63,21 @@ int main(int argc, char *argv[])
  else
  {
   ireadGAMMAS=1;ireadOCC=1;ireadCOEF=1;ireadFdiag=1;iNOTupdateOCC=0;iNOTupdateORB=0;
+ }
+ if(fcidump_type==1) // CMZ style
+ {
+  istyle_fcidump=1;
+ }
+ else // Standard FCIDUMP
+ {
+  ifstream read_dump("FCIDUMP");
+  do
+  {
+   getline(read_dump,line);
+   line.erase(std::remove_if(line.begin(),line.end(),::isspace),line.end());
+   iskip_fcidump++;
+  }while(line!="$" && line!="&");
+  read_dump.close();
  }
  
  // Allocate arrays
@@ -94,6 +111,13 @@ int main(int argc, char *argv[])
 
  // Read the FCIDUMP file
  read_fcidump(NBF_tot,Vnn);
+ if(ifort_fcidump==1) // Fortran will deal with integral transformations (we can safely deallocate the ERIs in C++)
+ {
+  delete[] ERI_tran;ERI_tran=NULL;
+  delete[] ERI_init;ERI_init=NULL;
+  ERI_tran=new double[1]; // But, reallocate them of size 1 to avoid segmentation fault at the end of the code
+  ERI_init=new double[1];
+ }
 
  // Prepare the MO guess
  if(iguess==0)  // Hcore basis
@@ -146,7 +170,7 @@ int main(int argc, char *argv[])
  run_noft_c(&INOF,&Ista,&NBF_tot,&NBF_occ,&Nfrozen,&Npairs,&Ncoupled,&Nbeta_elect,&Nalpha_elect,
             &imethocc,&imethorb,&itermax,&iprintdmn,&iprintswdmn,&iprintints,&itolLambda,&ndiis,
             &Enof,&tolE,&Vnn,Occ,Overlap,NO_COEF,&restart,&ireadGAMMAS,&ireadOCC,&ireadCOEF,
-            &ireadFdiag,&iNOTupdateOCC,&iNOTupdateORB,&ifort_fcidump);
+            &ireadFdiag,&iNOTupdateOCC,&iNOTupdateORB,&ifort_fcidump,&iskip_fcidump,&istyle_fcidump);
  
  // Compute the density matrix in the orginal basis (we will use hCORE_tran as a temporary array)
  dm1=new double[NBF_tot*NBF_tot];

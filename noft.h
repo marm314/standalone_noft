@@ -8,7 +8,8 @@ extern "C" {
                  int *itermax,int *iprintdmn,int *iprintswdmn,int *iprintints,int *itolLambda,
                  int *ndiis,double *Enof,double *tolE,double *Vnn,double *Occ,double *Overlap_in,
                  double *NO_COEF_in, int *restart,int *ireadGAMMAS,int *ireadocc,int *ireadCOEF,
-                 int *ireadFdiag, int *iNOTupdateocc,int *iNOTupdateORB,int *ifort_fcidump);
+                 int *ireadFdiag, int *iNOTupdateocc,int *iNOTupdateORB,int *ifort_fcidump,
+		 int *iskip_fcidump,int *istyle_fcidump);
  void coef_2_hcore(double *NO_COEF_v,int *NBF);
  void coef_2_ERI(double *NO_COEF_v,int *NBF);
  void hcore_ij(int *iorb,int *jorb,int *NBF,double *hVal);
