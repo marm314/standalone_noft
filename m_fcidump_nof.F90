@@ -15,7 +15,7 @@ module m_fcidump_nof
  use m_definitions
  implicit none
 
- logical::fort_fcidump=.false.
+ logical::fort_fcidump=.false.,standard_fcidump=.true.
  real(dp),allocatable,dimension(:,:)::hCORE_IN_NOF
  real(dp),allocatable,dimension(:,:,:,:)::ERI_IN_NOF
 

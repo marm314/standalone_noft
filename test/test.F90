@@ -224,11 +224,10 @@ subroutine mo_ints(NBF_tot, NBF_occ, NBF_jkl, Occ, DM2_JK, NO_COEF, hCORE, ERImo
  complex(dp), optional, intent(inout) :: ERImolJsr_cmplx(NBF_tot, NBF_jkl, NBF_jkl)
  complex(dp), optional, intent(inout) :: ERImolLsr_cmplx(NBF_tot, NBF_jkl, NBF_jkl)
 
- !write(*,*) ' Starting transformation of hCORE and ERI integrals'
- ! Compute hCORE (initially SITE_hCORE, in the end hCORE)
+ ! Compute hCORE
  hCORE=matmul(transpose(NO_COEF),matmul(hCORE_IN_NOF,NO_COEF))
 
- ! Compute ERImol (initially SITE_ERI, in the end ERImol)
+ ! Compute ERImol
  ERImol=ERI_IN_NOF
  call transformERI_NOF(NBF_tot,NO_COEF,ERImol) ! MO -> New NOs.
 
