@@ -53,3 +53,7 @@ m_fcidump_c.mod
 m_noft_driver_c.mod
 test/testc.x
 m_noft_driver_c.o
+m_fcidump_nof.mod
+m_fcidump_nof.o
+test/m_fcidump_nof.o
+test/m_fcidump_nof.mod

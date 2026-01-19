@@ -186,8 +186,9 @@ int main(int argc, char *argv[])
 
  // Print results
  cout<<endl;
- cout<<setprecision(8)<<fixed<<endl;
+ cout<<setprecision(8)<<fixed;
  cout<<"NOFT SCF energy"<<setw(20)<<Enof<<endl;
+ cout<<endl;
  cout<<endl;
  cout<<" Final occupation numbers"<<endl;
  cout<<setprecision(5)<<fixed;

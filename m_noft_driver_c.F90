@@ -18,10 +18,6 @@ module m_noft_driver_c
 
  implicit none
 
- logical::fort_fcidump=.false.
- real(dp),allocatable,dimension(:,:)::hCORE_IN_FOR
- real(dp),allocatable,dimension(:,:,:,:)::ERI_IN_FOR
-
 !!***
 
  public :: run_noft_c
@@ -53,6 +49,7 @@ subroutine run_noft_c(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_el
 &  Overlap_in,NO_COEF_in,restart,ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,iNOTupdateocc,iNOTupdateORB, &
 &  ifort_fcidump) bind(C,name="run_noft_c")
  use m_definitions
+ use m_fcidump_nof
  implicit none
 !Arguments ------------------------------------
 !scalars
