@@ -83,7 +83,6 @@ program noft_fcidump
  if(iargc()==6) then
   call getarg(6,arg)
   read(arg,'(i4)') iskip
-  if(iskip==0) write(*,'(a)') 'Not skiiping lines in the fcidump.noft'
  endif
 
  ! NOFT parameteres
@@ -186,13 +185,13 @@ program noft_fcidump
  write(*,'(a)') ' '
  write(*,'(a,f20.8)') 'NOFT SCF energy',Enof
  write(*,'(a)') ' '
- write(*,*) 'Final density matrix on the initial basis'
- write(*,'(a)') ' '
  write(*,'(a)') ' '
  write(*,*) 'Final occupation numbers'
  do ibasis=1,NBF_tot
   write(*,'(*(f15.5))') Occ(ibasis)
  enddo
+ write(*,'(a)') ' '
+ write(*,*) 'Final density matrix on the initial basis'
  write(*,'(a)') ' '
  do ibasis=1,NBF_tot
   DM1(ibasis,ibasis)=0.5d0*Occ(ibasis)

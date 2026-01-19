@@ -14,7 +14,7 @@ using namespace std;
 void read_fcidump(int &NBF_tot,double &Vnn);
 void jacobi_donof(int n, double **m, double **v);
 void sort_donof(int n, double **m, double **v);
-int type;
+int fcidump_type;
 double *hCORE_init,*ERI_init; // Read from FCIDUMP
 double *hCORE_tran,*ERI_tran;       // Transformed
 
@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
  int iguess,ifort_fcidump;
  int iorb,jorb,korb;
  double Enof,tolE,Vnn;
- double *Occ,*NO_COEF,*Overlap;
+ double *Occ,*NO_COEF,*Overlap,*dm1;
  double **Cguess,**TMP_MAT;
 
  // Initialize variables
@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
  {
   cout<<" Include the arguments:"<<endl;
   cout<<endl;
-  cout<<"  INOF(integer) Nbasis(integer) Nalpha_electrons(integer) iguess(0 Hcore, 1 init MO basis) restart(integer) type_fcidump(integer)"<<endl;
+  cout<<"  INOF(integer) Nbasis(integer) Nalpha_electrons(integer) iguess(0 Hcore, 1 init MO basis) restart(integer) fcidump_type(integer)"<<endl;
   cout<<endl;
   return 0;
  }
@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
  Nalpha_elect=atoi(argv[3]);
  iguess=atoi(argv[4]);
  restart=atoi(argv[5]);
- type=atoi(argv[6]);
+ fcidump_type=atoi(argv[6]);
  NBF_occ=NBF_tot;
  Nbeta_elect=Nalpha_elect;
  Npairs=(Nbeta_elect+Nalpha_elect)/2;
@@ -147,27 +147,69 @@ int main(int argc, char *argv[])
             &imethocc,&imethorb,&itermax,&iprintdmn,&iprintswdmn,&iprintints,&itolLambda,&ndiis,
             &Enof,&tolE,&Vnn,Occ,Overlap,NO_COEF,&restart,&ireadGAMMAS,&ireadOCC,&ireadCOEF,
             &ireadFdiag,&iNOTupdateOCC,&iNOTupdateORB,&ifort_fcidump);
+ 
+ // Compute the density matrix in the orginal basis (we will use hCORE_tran as a temporary array)
+ dm1=new double[NBF_tot*NBF_tot];
+ for(iorb=0;iorb<NBF_tot*NBF_tot;iorb++)
+ {
+  dm1[iorb]=zero;
+  hCORE_tran[iorb]=zero;
+ }
+ for(iorb=0;iorb<NBF_tot;iorb++)
+ {
+  dm1[iorb+iorb*NBF_tot]=0.5e0*Occ[iorb];
+ }
+ for(iorb=0;iorb<NBF_tot;iorb++)
+ {
+  for(jorb=0;jorb<NBF_tot;jorb++)
+  {
+   for(korb=0;korb<NBF_tot;korb++)
+   {
+    hCORE_tran[iorb+jorb*NBF_tot]+=NO_COEF[iorb+korb*NBF_tot]*dm1[korb+jorb*NBF_tot];
+   }  
+  }
+ }
+ for(iorb=0;iorb<NBF_tot;iorb++)
+ {
+  dm1[iorb+iorb*NBF_tot]=zero;
+ }
+ for(iorb=0;iorb<NBF_tot;iorb++)
+ {
+  for(jorb=0;jorb<NBF_tot;jorb++)
+  {
+   for(korb=0;korb<NBF_tot;korb++)
+   {
+    dm1[iorb+jorb*NBF_tot]+=hCORE_tran[iorb+korb*NBF_tot]*NO_COEF[jorb+korb*NBF_tot];
+   }  
+  }
+ }
 
  // Print results
  cout<<endl;
  cout<<setprecision(8)<<fixed<<endl;
- cout<<" Energy "<<setw(20)<<Enof<<endl;
+ cout<<"NOFT SCF energy"<<setw(20)<<Enof<<endl;
  cout<<endl;
- cout<<" Occupancies"<<endl;
+ cout<<" Final occupation numbers"<<endl;
+ cout<<setprecision(5)<<fixed;
  jorb=0;
  for(iorb=0;iorb<NBF_tot;iorb++)
  {
-  cout<<setw(20)<<Occ[iorb];
-  jorb++;
-  if(jorb==5)
-  {
-   cout<<endl;
-   jorb=0;
-  }
+  cout<<setw(15)<<Occ[iorb]<<endl;
  }
  cout<<endl;
+ cout<<" Final density matrix on the initial basis"<<endl;
+ cout<<endl;
+ for(iorb=0;iorb<NBF_tot;iorb++)
+ {
+  for(jorb=0;jorb<NBF_tot;jorb++)
+  {
+   cout<<setw(15)<<dm1[iorb+jorb*NBF_tot];
+  }
+  cout<<endl;
+ } 
 
  // Deallocate arrays
+ delete[] dm1;dm1=NULL;
  delete[] Occ;Occ=NULL;
  delete[] NO_COEF;NO_COEF=NULL;
  delete[] Overlap;Overlap=NULL;
@@ -320,7 +362,7 @@ void read_fcidump(int &NBF_tot,double &Vnn)
  int iorb,jorb,korb,lorb;
  double Val;
  string line;
- if(type==0) // Standard
+ if(fcidump_type==0) // Standard
  {
   iorb=system(" echo '   0.0   -1   -1  -1   -1 ' >> FCIDUMP ");
  }
@@ -329,7 +371,7 @@ void read_fcidump(int &NBF_tot,double &Vnn)
   iorb=system(" echo '  -1   -1   -1   -1   0.0 ' >> FCIDUMP ");
  }
  ifstream read_dump("FCIDUMP");
- if(type==0)
+ if(fcidump_type==0)
  {
   do
   {
