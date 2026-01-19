@@ -23,14 +23,13 @@ program noft_fcidump
  integer::Ncoupled=1,Nbeta_elect,Nalpha_elect
  integer::imethocc=1,imethorb=1,itermax=10000,iprintdmn=0,iprintswdmn=0,iprintints=0
  integer::itolLambda=5,ndiis=5,iguess=0,irestart=0,iskip=0,freeze_orb=0
- real(dp)::Enof,tolE=tol9,Vnn=zero,Val
+ real(dp)::Enof,tolE=tol9,Vnn=zero
  real(dp),allocatable,dimension(:)::Occ,Work
  real(dp),allocatable,dimension(:,:)::NO_COEF,MO_Overlap,DM1
  character(len=100)::ofile_name
  character(len=100)::arg
  external::mo_ints
- integer::ibasis,ibasis1,ibasis2,ibasis3,lwork,info
- integer::nbf_unit=25
+ integer::ibasis,lwork,info
 
  ! Read parameters
  if(iargc()/=4 .and. iargc()/=5 .and. iargc()/=6) then
@@ -63,6 +62,8 @@ program noft_fcidump
  endif
 
  ! NOFT parameteres
+ iskip_nof=iskip
+ if(iskip_nof==0) standard_fcidump=.false.
  NBF_occ=NBF_tot
  Nfrozen=0
  Nbeta_elect=Nalpha_elect
@@ -82,49 +83,8 @@ program noft_fcidump
  hCORE_IN_NOF=0d0;ERI_IN_NOF=0d0;
  inquire(file='NOT_ORB',exist=not_orb_opt)
  if(not_orb_opt) freeze_orb=1
- inquire(file='FCIDUMP',exist=nbf_FCIDUMP_found)
- if(nbf_FCIDUMP_found) then
-  open(newunit=nbf_unit,file='FCIDUMP',status='old',form='formatted')
-  if(iskip/=0) then
-   do ibasis=1,iskip
-    read(nbf_unit,'(a)') arg 
-   enddo 
-  endif
-  do
-   if(iskip==0) then
-    read(nbf_unit,*) ibasis,ibasis1,ibasis2,ibasis3,Val
-   else
-    read(nbf_unit,*) Val,ibasis,ibasis1,ibasis2,ibasis3
-   endif
-   if(ibasis==-1 .and. ibasis1==-1 .and. ibasis2==-1 .and. ibasis3==-1) exit
-   if(ibasis==0 .and. ibasis1==0 .and. ibasis2==0 .and. ibasis3==0) Vnn=Val
-   if(ibasis/=0 .and. ibasis1/=0 .and. ibasis2==0 .and. ibasis3==0) then
-
-    hCORE_IN_NOF(ibasis,ibasis1)=Val
-    hCORE_IN_NOF(ibasis1,ibasis)=Val
-
-   endif
-   if(ibasis/=0 .and. ibasis1/=0 .and. ibasis2/=0 .and. ibasis3/=0) then
-
-    ERI_IN_NOF(ibasis ,ibasis2,ibasis1,ibasis3)=Val
-    ERI_IN_NOF(ibasis ,ibasis3,ibasis1,ibasis2)=Val
-    ERI_IN_NOF(ibasis1,ibasis3,ibasis ,ibasis2)=Val
-    ERI_IN_NOF(ibasis1,ibasis2,ibasis ,ibasis3)=Val
-
-    ERI_IN_NOF(ibasis2,ibasis ,ibasis3,ibasis1)=Val
-    ERI_IN_NOF(ibasis3,ibasis ,ibasis2,ibasis1)=Val
-    ERI_IN_NOF(ibasis3,ibasis1,ibasis2,ibasis )=Val
-    ERI_IN_NOF(ibasis2,ibasis1,ibasis3,ibasis )=Val
-
-   endif
-   
-  enddo
-  close(nbf_unit)
- else
-  write(*,*) 'FCIDUMP file not found!'
-  stop
- endif
-
+ call read_fcidump_NOF()
+ Vnn=Vnn_nof
 
  if(iguess==0) then ! Hcore (saved in NO_COEF initially before the diagonalization)  
      

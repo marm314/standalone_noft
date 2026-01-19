@@ -77,7 +77,9 @@ subroutine run_noft_c(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_el
  ofile_name='tmp.noft'
 
  ! Decide whether to use C++ or Fortran to perform integrals transformation
- if(ifort_fcidump==1) fort_fcidump=.true.
+ if(ifort_fcidump==1) then
+  fort_fcidump=.true.
+ endif
   
  ! Allocate and initialize arrays
  allocate(Overlap(NBF_tot,NBF_tot),NO_COEF(NBF_tot,NBF_tot))
@@ -145,6 +147,7 @@ subroutine mo_ints_c(NBF_tot, NBF_occ, NBF_jkl, Occ, DM2_JK, NO_COEF, hCORE, ERI
      &              NO_COEF_cmplx, hCORE_cmplx, ERImol_cmplx, ERImolJsr_cmplx, ERImolLsr_cmplx, all_ERIs,  &
      &              Edft_xc, do_xc_dft)
  use m_definitions
+ use m_fcidump_nof
  use iso_c_binding
  implicit none
 !Arguments ------------------------------------
@@ -202,48 +205,59 @@ subroutine mo_ints_c(NBF_tot, NBF_occ, NBF_jkl, Occ, DM2_JK, NO_COEF, hCORE, ERI
  real(c_double),allocatable::NO_COEF_vec(:)
 !************************************************************************
 
- Val=zero
- NBF=NBF_tot
- ! Allocate arrays
- allocate(NO_COEF_vec(NBF_tot*NBF_tot))
- korb=1
- do iorb=1,NBF_tot
-  do jorb=1,NBF_tot
-   NO_COEF_vec(korb)=NO_COEF(jorb,iorb)
-   korb=korb+1
-  enddo
- enddo
+ if(fort_fcidump) then
 
- ! Transformation of hCORE
- call coef_2_hcore(NO_COEF_vec,NBF)
- do iorb=1,NBF_tot
-  iiorb=iorb
-  do jorb=1,NBF_tot
-   jjorb=jorb
-   call hcore_ij(iiorb,jjorb,NBF,Val)
-   hCORE(iorb,jorb)=Val
-  enddo
- enddo
+  ! Transformation of hCORE
+  hCORE=matmul(transpose(NO_COEF),matmul(hCORE_IN_NOF,NO_COEF))
 
- ! Transformation of ERI
- call coef_2_ERI(NO_COEF_vec,NBF)
- do iorb=1,NBF_tot
-  iiorb=iorb
-  do jorb=1,NBF_jkl
-   jjorb=jorb
-   do korb=1,NBF_jkl
-    kkorb=korb
-    do lorb=1,NBF_jkl
-     llorb=lorb
-     call ERI_ijkl(iiorb,jjorb,kkorb,llorb,NBF,Val)
-     ERImol(iorb,jorb,korb,lorb)=Val
+  ! Transformation of ERI (assuming NBF_jkl=NBF_tot)
+  ERImol=ERI_IN_NOF
+  call transformERI_NOF(NBF_tot,NO_COEF,ERImol) ! MO -> New NOs.
+
+ else
+  Val=zero
+  NBF=NBF_tot
+  ! Allocate arrays
+  allocate(NO_COEF_vec(NBF_tot*NBF_tot))
+  korb=1
+  do iorb=1,NBF_tot
+   do jorb=1,NBF_tot
+    NO_COEF_vec(korb)=NO_COEF(jorb,iorb)
+    korb=korb+1
+   enddo
+  enddo
+
+  ! Transformation of hCORE
+  call coef_2_hcore(NO_COEF_vec,NBF)
+  do iorb=1,NBF_tot
+   iiorb=iorb
+   do jorb=1,NBF_tot
+    jjorb=jorb
+    call hcore_ij(iiorb,jjorb,NBF,Val)
+    hCORE(iorb,jorb)=Val
+   enddo
+  enddo
+
+  ! Transformation of ERI
+  call coef_2_ERI(NO_COEF_vec,NBF)
+  do iorb=1,NBF_tot
+   iiorb=iorb
+   do jorb=1,NBF_jkl
+    jjorb=jorb
+    do korb=1,NBF_jkl
+     kkorb=korb
+     do lorb=1,NBF_jkl
+      llorb=lorb
+      call ERI_ijkl(iiorb,jjorb,kkorb,llorb,NBF,Val)
+      ERImol(iorb,jorb,korb,lorb)=Val
+     enddo
     enddo
    enddo
   enddo
- enddo
 
- ! Deallocate arrays
- deallocate(NO_COEF_vec)
+  ! Deallocate arrays
+  deallocate(NO_COEF_vec)
+ endif
 
  ! 'Use' the unsed variables to avoid warnings!
  if(Occ(1)==one) then
