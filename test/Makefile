@@ -6,6 +6,7 @@ testF90:
 	../gitversion.sh 
 	gfortran -O2 -c ../m_nofoutput.F90
 	gfortran -O2 -c ../m_definitions.F90
+	gfortran -O2 -c ../m_fcidump_nof.F90
 	gfortran -O2 -c ../m_lbfgs_intern.F
 	gfortran -O2 -c ../m_integd.F90
 	gfortran -O2 -c ../m_rdmd.F90
@@ -22,7 +23,6 @@ testF90:
 	gfortran -O2 -c gitver.F90
 	gfortran -O2 -c ../m_noft_driver.F90
 	gfortran -O2 -llapack -lblas *.o test.F90 -o test.x
-	gfortran -O2 -llapack -lblas *.o test2.F90 -o test2.x
 testCpp:
 	g++ -O2 test.cpp \
 	-L./../ \
@@ -31,7 +31,7 @@ testCpp:
 	-o testc.x	
 
 clean:
-	/bin/rm -rf *.o *.mod gitver.F90 test.x test2.x testc.x 
+	/bin/rm -rf *.o *.mod gitver.F90 test.x testc.x 
 
 cleannoft:
 	/bin/rm -rf CANON_COEF  DYSON_COEF  F_DIAG  fort.2  GAMMAS NO_COEF  NO_COEF_BIN hubbard.noft

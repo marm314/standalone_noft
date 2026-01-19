@@ -6,6 +6,7 @@ lib:
 	./gitversion.sh 
 	gfortran -Wall -fPIC -c m_nofoutput.F90
 	gfortran -Wall -fPIC -c m_definitions.F90
+	gfortran -Wall -fPIC -c m_fcidump_nof.F90
 	gfortran -Wall -fPIC -c m_lbfgs_intern.F
 	gfortran -Wall -fPIC -c m_integd.F90
 	gfortran -Wall -fPIC -c m_rdmd.F90
@@ -30,6 +31,7 @@ module:
 	./gitversion.sh 
 	gfortran -Wall -c m_nofoutput.F90
 	gfortran -Wall -c m_definitions.F90
+	gfortran -Wall -c m_fcidump_nof.F90
 	gfortran -Wall -c m_lbfgs_intern.F
 	gfortran -Wall -c m_integd.F90
 	gfortran -Wall -c m_rdmd.F90

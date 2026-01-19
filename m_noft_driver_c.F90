@@ -1,26 +1,3 @@
-!!****m* DoNOF/m_fcidump_c
-!! NAME
-!! m_fcidump_c
-!!
-!! FUNCTION
-!!  FCIDUMP info
-!!
-!! COPYRIGHT
-!!
-!! NOTES
-!!
-!! SOURCE
-
-module m_fcidump_c
- use m_definitions
- implicit none
-
- real(dp),allocatable,dimension(:,:)::hCORE_in
- real(dp),allocatable,dimension(:,:,:,:)::ERI_in
-
-end module m_fcidump_c
-!!***
-
 !!****m* DoNOF/m_noft_driver_c
 !! NAME
 !!  m_noft_driver_c
@@ -36,8 +13,8 @@ end module m_fcidump_c
 module m_noft_driver_c
 
  use iso_c_binding
- use m_fcidump_c
  use m_noft_driver
+ use m_definitions
 
  implicit none
 
@@ -68,13 +45,15 @@ contains
 !! SOURCE
 
 subroutine run_noft_c(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect, &
-&  imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,Enof,tolE,Vnn,     &
-&  Occ,NO_COEF_in,restart,ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,iNOTupdateocc,iNOTupdateORB) bind(C,name="run_noft_c")
+&  imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,Enof,tolE,Vnn,Occ, &
+&  Overlap_in,NO_COEF_in,restart,ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,iNOTupdateocc,iNOTupdateORB, &
+&  ifort_fcidump,iskip_fcidump,istyle_fcidump) bind(C,name="run_noft_c")
  use m_definitions
+ use m_fcidump_nof
  implicit none
 !Arguments ------------------------------------
 !scalars
- integer(c_int),intent(in)::restart
+ integer(c_int),intent(in)::restart,ifort_fcidump,iskip_fcidump,istyle_fcidump
  integer(c_int),intent(in)::ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,iNOTupdateocc,iNOTupdateORB
  integer(c_int),intent(in)::INOF,Ista,imethocc,imethorb,itermax,iprintdmn,iprintints,iprintswdmn
  integer(c_int),intent(in)::NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,itolLambda,ndiis  
@@ -83,13 +62,11 @@ subroutine run_noft_c(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_el
  real(c_double),intent(inout)::Enof
 !arrays
  real(c_double),dimension(NBF_tot),intent(inout)::Occ
+ real(c_double),dimension(NBF_tot*NBF_tot),intent(inout)::Overlap_in
  real(c_double),dimension(NBF_tot*NBF_tot),intent(inout)::NO_COEF_in
 !Local variables ------------------------------
 !scalars
- logical::FCIDUMP_found
- integer::iorb,jorb,korb,lorb
- integer::nbf_unit=2026
- real(c_double)::Val
+ integer::iorb,jorb,korb
  external::mo_ints_c
 !arrays
  real(dp),allocatable::Overlap(:,:)
@@ -98,55 +75,41 @@ subroutine run_noft_c(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_el
 !************************************************************************
  
  ofile_name='tmp.noft'
-write(*,*) 'Hello fortran'
-goto 111
+
+ ! If Fortran will perform integrals transformation
+ fort_fcidump=.false.
+ if(ifort_fcidump==1) then
+  fort_fcidump=.true.
+  iskip_nof=iskip_fcidump
+  standard_fcidump=(istyle_fcidump==0)  
+  allocate(hCORE_IN_NOF(NBF_tot,NBF_tot),ERI_IN_NOF(NBF_tot,NBF_tot,NBF_tot,NBF_tot))
+  hCORE_IN_NOF=0d0;ERI_IN_NOF=0d0;
+  call read_fcidump_NOF()
+  Vnn=Vnn_nof
+  if(NBF_tot/=NBF_occ) then
+   write(*,*) 'Error! It is necessary to enforce NBF_occ=NBF_tot when Fortran deals with the FCIDUMP'
+   stop
+  endif
+ endif
+  
  ! Allocate and initialize arrays
  allocate(Overlap(NBF_tot,NBF_tot),NO_COEF(NBF_tot,NBF_tot))
- allocate(hCORE_in(NBF_tot,NBF_tot),ERI_in(NBF_tot,NBF_tot,NBF_tot,NBF_tot))
- Overlap=zero;NO_COEF=zero;hCORE_in=zero;ERI_in=zero;
+ Overlap=zero;NO_COEF=zero;
  do iorb=1,NBF_tot
-  Overlap(iorb,iorb)=one
-  NO_COEF(iorb,iorb)=one
+  do jorb=1,NBF_tot
+   Overlap(jorb,iorb)=Overlap_in(jorb+NBF_tot*(iorb-1))
+   NO_COEF(jorb,iorb)=NO_COEF_in(jorb+NBF_tot*(iorb-1))
+  enddo
  enddo
 
- ! Read the FCIDUMP
- inquire(file='imp_model.fcidump',exist=FCIDUMP_found)
- if(FCIDUMP_found) then
-  call system('echo "-1 -1 -1 -1  0.0" >> imp_model.fcidump')
-  open(newunit=nbf_unit,file='imp_model.fcidump',status='old',form='formatted')
-  do
-   read(nbf_unit,*) iorb,jorb,korb,lorb,Val
-   if(iorb==-1 .and. jorb==-1 .and. korb==-1 .and. lorb==-1) exit
-   if(iorb==0 .and. jorb==0 .and. korb==0 .and. lorb==0) Vnn=Val
-   if(iorb/=0 .and. jorb/=0 .and. korb==0 .and. lorb==0) then
-    hCORE_in(iorb,jorb)=Val
-    hCORE_in(jorb,iorb)=Val
-   endif
-   if(iorb/=0 .and. jorb/=0 .and. korb/=0 .and. lorb/=0) then
-    ERI_in(iorb,korb,jorb,lorb)=Val
-    ERI_in(iorb,lorb,jorb,korb)=Val
-    ERI_in(jorb,lorb,iorb,korb)=Val
-    ERI_in(jorb,korb,iorb,lorb)=Val
-    ERI_in(korb,iorb,lorb,jorb)=Val
-    ERI_in(lorb,iorb,korb,jorb)=Val
-    ERI_in(lorb,jorb,korb,iorb)=Val
-    ERI_in(korb,jorb,lorb,iorb)=Val
-   endif
-  enddo
-  close(nbf_unit)
- else
-  write(*,*) 'imp_model.fcidump file not found!'
-  stop
- endif
-
  ! Call the run_noft module
- if(restart/=1) then
-   write(*,*) 'running NOFT module'
+ if(restart==0) then
+   write(*,*) 'running NOFT module from C++'
    call run_noft(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect, &
   &   imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,           &
   &   Enof,tolE,Vnn,Overlap,Occ,mo_ints_c,ofile_name,NO_COEF=NO_COEF,iNOTupdateORB=iNOTupdateORB)
  else
-   write(*,*) 'running NOFT module (restart)'
+   write(*,*) 'running NOFT module from C++ (restart)'
    call run_noft(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect, &
   &   imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,           &
   &   Enof,tolE,Vnn,Overlap,Occ,mo_ints_c,ofile_name,NO_COEF=NO_COEF,restart=.true.,         &
@@ -165,9 +128,7 @@ goto 111
 
  ! Deallocate arrays
  deallocate(Overlap,NO_COEF)
- deallocate(hCORE_in,ERI_in)
 
-111 continue
 end subroutine run_noft_c
 !!***
 
@@ -197,8 +158,8 @@ subroutine mo_ints_c(NBF_tot, NBF_occ, NBF_jkl, Occ, DM2_JK, NO_COEF, hCORE, ERI
      &              NO_COEF_cmplx, hCORE_cmplx, ERImol_cmplx, ERImolJsr_cmplx, ERImolLsr_cmplx, all_ERIs,  &
      &              Edft_xc, do_xc_dft)
  use m_definitions
+ use m_fcidump_nof
  use iso_c_binding
- use m_fcidump_c
  implicit none
 !Arguments ------------------------------------
 !scalars
@@ -220,36 +181,94 @@ subroutine mo_ints_c(NBF_tot, NBF_occ, NBF_jkl, Occ, DM2_JK, NO_COEF, hCORE, ERI
  complex(dp), optional, intent(inout) :: ERImolLsr_cmplx(NBF_tot, NBF_jkl, NBF_jkl)
 !Local variables ------------------------------
 !scalars
- integer(c_int)::iorb,jorb,korb,NBF
+ integer(c_int)::iorb,jorb,korb,lorb,NBF
+ integer(c_int)::iiorb,jjorb,kkorb,llorb
  real(c_double)::Val
  interface
   subroutine coef_2_hcore(NO_COEF_v,NBF) bind(C,name="coef_2_hcore")
   use iso_c_binding
   real(c_double),dimension(*)::NO_COEF_v
-  integer(c_int), value :: NBF
+  integer(c_int), intent(inout) :: NBF
   end subroutine
-  subroutine hcore_ijkl(iorb,jorb,Val) bind(C,name="hcore_ijkl")
+  subroutine coef_2_ERI(NO_COEF_v,NBF) bind(C,name="coef_2_ERI")
   use iso_c_binding
-  integer(c_int), value :: iorb
-  integer(c_int), value :: jorb
-  real(c_double), value :: Val
+  real(c_double),dimension(*)::NO_COEF_v
+  integer(c_int), intent(inout) :: NBF
+  end subroutine
+  subroutine hcore_ij(iorb,jorb,NBF,Val) bind(C,name="hcore_ij")
+  use iso_c_binding
+  integer(c_int), intent(inout) :: iorb
+  integer(c_int), intent(inout) :: jorb
+  integer(c_int), intent(inout) :: NBF
+  real(c_double), intent(inout) :: Val
+  end subroutine
+  subroutine ERI_ijkl(iorb,jorb,korb,lorb,NBF,Val) bind(C,name="ERI_ijkl")
+  use iso_c_binding
+  integer(c_int), intent(inout) :: iorb
+  integer(c_int), intent(inout) :: jorb
+  integer(c_int), intent(inout) :: korb
+  integer(c_int), intent(inout) :: lorb
+  integer(c_int), intent(inout) :: NBF
+  real(c_double), intent(inout) :: Val
   end subroutine
  end interface
 !arrays
  real(c_double),allocatable::NO_COEF_vec(:)
 !************************************************************************
 
- Val=zero
- NBF=NBF_tot
- ! Allocate arrays
- allocate(NO_COEF_vec(NBF_tot*NBF_tot))
- korb=1
- do iorb=1,NBF_tot
-  do jorb=1,NBF_tot
-   NO_COEF_vec(korb)=NO_COEF(jorb,iorb)
-   korb=korb+1
+ if(fort_fcidump) then
+
+  ! Transformation of hCORE
+  hCORE=matmul(transpose(NO_COEF),matmul(hCORE_IN_NOF,NO_COEF))
+
+  ! Transformation of ERI (assuming NBF_jkl=NBF_tot)
+  ERImol=ERI_IN_NOF
+  call transformERI_NOF(NBF_tot,NO_COEF,ERImol) ! MO -> New NOs.
+
+ else
+  Val=zero
+  NBF=NBF_tot
+  ! Allocate arrays
+  allocate(NO_COEF_vec(NBF_tot*NBF_tot))
+  korb=1
+  do iorb=1,NBF_tot
+   do jorb=1,NBF_tot
+    NO_COEF_vec(korb)=NO_COEF(jorb,iorb)
+    korb=korb+1
+   enddo
   enddo
- enddo
+
+  ! Transformation of hCORE
+  call coef_2_hcore(NO_COEF_vec,NBF)
+  do iorb=1,NBF_tot
+   iiorb=iorb
+   do jorb=1,NBF_tot
+    jjorb=jorb
+    call hcore_ij(iiorb,jjorb,NBF,Val)
+    hCORE(iorb,jorb)=Val
+   enddo
+  enddo
+
+  ! Transformation of ERI
+  call coef_2_ERI(NO_COEF_vec,NBF)
+  do iorb=1,NBF_tot
+   iiorb=iorb
+   do jorb=1,NBF_jkl
+    jjorb=jorb
+    do korb=1,NBF_jkl
+     kkorb=korb
+     do lorb=1,NBF_jkl
+      llorb=lorb
+      call ERI_ijkl(iiorb,jjorb,kkorb,llorb,NBF,Val)
+      ERImol(iorb,jorb,korb,lorb)=Val
+     enddo
+    enddo
+   enddo
+  enddo
+
+  ! Deallocate arrays
+  deallocate(NO_COEF_vec)
+ endif
 
  ! 'Use' the unsed variables to avoid warnings!
  if(Occ(1)==one) then
@@ -276,23 +295,6 @@ subroutine mo_ints_c(NBF_tot, NBF_occ, NBF_jkl, Occ, DM2_JK, NO_COEF, hCORE, ERI
  endif
  if(present(NO_COEF_cmplx)) then
  endif
-
- ! Transformation of hCORE
- call coef_2_hcore(NO_COEF_vec,NBF)
- do iorb=1,NBF_tot
-  do jorb=1,NBF_tot
-   call hcore_ijkl(iorb,jorb,Val)
-   hCORE(iorb,jorb)=Val 
-  enddo
- enddo
- hCORE=matmul(transpose(NO_COEF),matmul(hCORE_in,NO_COEF))
-
- ! Transformation of ERI
- ERImol=ERI_in
-! call transformERI(NBF_tot,NO_COEF,ERImol) ! MO -> New NOs.
-
- ! Deallocate arrays
- deallocate(NO_COEF_vec)
 
 end subroutine mo_ints_c
 !!***
