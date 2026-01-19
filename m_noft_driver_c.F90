@@ -86,6 +86,10 @@ subroutine run_noft_c(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_el
   hCORE_IN_NOF=0d0;ERI_IN_NOF=0d0;
   call read_fcidump_NOF()
   Vnn=Vnn_nof
+  if(NBF_tot/=NBF_occ) then
+   write(*,*) 'Error! It is necessary to enforce NBF_occ=NBF_tot when Fortran deals with the FCIDUMP'
+   stop
+  endif
  endif
   
  ! Allocate and initialize arrays
