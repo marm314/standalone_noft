@@ -57,3 +57,5 @@ m_fcidump_nof.mod
 m_fcidump_nof.o
 test/m_fcidump_nof.o
 test/m_fcidump_nof.mod
+m_adam.o
+m_adam.mod
