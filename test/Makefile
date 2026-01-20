@@ -13,6 +13,7 @@ testF90:
 	gfortran -O2 -c ../m_anti2unit.F90
 	gfortran -O2 -c ../m_elag.F90
 	gfortran -O2 -c ../m_diagf.F90
+	gfortran -O2 -c ../m_adam.F90
 	gfortran -O2 -c ../m_hessian.F90
 	gfortran -O2 -c ../m_gammatodm2.F90
 	gfortran -O2 -c ../m_e_grad_occ.F90

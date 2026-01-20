@@ -21,7 +21,7 @@ program noft_fcidump
  logical::nbf_FCIDUMP_found,not_orb_opt
  integer::INOF,Ista=0,NBF_tot,NBF_occ,Nfrozen,Npairs
  integer::Ncoupled=1,Nbeta_elect,Nalpha_elect
- integer::imethocc=1,imethorb=1,itermax=10000,iprintdmn=0,iprintswdmn=0,iprintints=0
+ integer::imethocc=1,imethorb=0,itermax=10000,iprintdmn=0,iprintswdmn=0,iprintints=0
  integer::itolLambda=5,ndiis=5,iguess=0,irestart=0,iskip=0,freeze_orb=0
  real(dp)::Enof,tolE=tol9,Vnn=zero
  real(dp),allocatable,dimension(:)::Occ,Work
