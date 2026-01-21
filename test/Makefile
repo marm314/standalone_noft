@@ -23,7 +23,7 @@ testF90:
 	gfortran -O2 -c ../m_tz_pccd_amplitudes.F90
 	gfortran -O2 -c gitver.F90
 	gfortran -O2 -c ../m_noft_driver.F90
-	gfortran -O2 -llapack -lblas *.o test.F90 -o test.x
+	gfortran -O2  *.o test.F90 -llapack -lblas -o test.x
 testCpp:
 	g++ -O2 test.cpp \
 	-L./../ \
