@@ -13,6 +13,7 @@ lib:
 	gfortran -Wall -fPIC -c m_anti2unit.F90
 	gfortran -Wall -fPIC -c m_elag.F90
 	gfortran -Wall -fPIC -c m_diagf.F90
+	gfortran -Wall -fPIC -c m_adam.F90
 	gfortran -Wall -fPIC -c m_hessian.F90
 	gfortran -Wall -fPIC -c m_gammatodm2.F90
 	gfortran -Wall -fPIC -c m_e_grad_occ.F90
@@ -38,6 +39,7 @@ module:
 	gfortran -Wall -c m_anti2unit.F90
 	gfortran -Wall -c m_elag.F90
 	gfortran -Wall -c m_diagf.F90
+	gfortran -Wall -c m_adam.F90
 	gfortran -Wall -c m_hessian.F90
 	gfortran -Wall -c m_gammatodm2.F90
 	gfortran -Wall -c m_e_grad_occ.F90
