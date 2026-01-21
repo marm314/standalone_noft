@@ -98,12 +98,12 @@ Warning:
 As a library:
 -------------
 
-  Remember to ad the PATH of libnoft.so to the library path.
+  Remember to add to the PATH the libnoft.so library.
 
   export LD_LIBRARY_PATH=$LIBRARY_PATH:$HOME/../
 
-  Also, is good to check that the library contains the linker subroutine
+  Also, is a good practice to check that the library contains the linker subroutine
 
   nm -D libnoft.so | grep run_noft_c  
 
-  should not be an empty output in the terminal
+  that should not be an empty output in the terminal
