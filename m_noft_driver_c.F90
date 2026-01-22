@@ -104,12 +104,12 @@ subroutine run_noft_c(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_el
 
  ! Call the run_noft module
  if(restart==0) then
-   write(*,*) 'running NOFT module from C++'
+   !write(*,*) 'running NOFT module from C++'
    call run_noft(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect, &
   &   imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,           &
   &   Enof,tolE,Vnn,Overlap,Occ,mo_ints_c,ofile_name,NO_COEF=NO_COEF,iNOTupdateORB=iNOTupdateORB)
  else
-   write(*,*) 'running NOFT module from C++ (restart)'
+   !write(*,*) 'running NOFT module from C++ (restart)'
    call run_noft(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect, &
   &   imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,           &
   &   Enof,tolE,Vnn,Overlap,Occ,mo_ints_c,ofile_name,NO_COEF=NO_COEF,restart=.true.,         &
