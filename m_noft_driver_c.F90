@@ -44,8 +44,8 @@ contains
 !!
 !! SOURCE
 
-subroutine run_noft_c(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect, &
-&  imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,Enof,tolE,Vnn,Occ, &
+subroutine run_noft_c(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect,       &
+&  imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,Enof,tolE,Vnn,s_reg,Occ, &
 &  Overlap_in,NO_COEF_in,restart,ireadGAMMAS,ireadocc,ireadCOEF,ireadFdiag,iNOTupdateocc,iNOTupdateORB, &
 &  ifort_fcidump,iskip_fcidump,istyle_fcidump) bind(C,name="run_noft_c")
  use m_definitions
@@ -58,7 +58,7 @@ subroutine run_noft_c(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_el
  integer(c_int),intent(in)::INOF,Ista,imethocc,imethorb,itermax,iprintdmn,iprintints,iprintswdmn
  integer(c_int),intent(in)::NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,itolLambda,ndiis  
  integer(c_int),intent(in)::Nbeta_elect,Nalpha_elect
- real(c_double),intent(inout)::Vnn,tolE
+ real(c_double),intent(inout)::Vnn,s_reg,tolE
  real(c_double),intent(inout)::Enof
 !arrays
  real(c_double),dimension(NBF_tot),intent(inout)::Occ
@@ -107,14 +107,15 @@ subroutine run_noft_c(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_el
    !write(*,*) 'running NOFT module from C++'
    call run_noft(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect, &
   &   imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,           &
-  &   Enof,tolE,Vnn,Overlap,Occ,mo_ints_c,ofile_name,NO_COEF=NO_COEF,iNOTupdateORB=iNOTupdateORB)
+  &   Enof,tolE,Vnn,Overlap,Occ,mo_ints_c,ofile_name,s_reg=s_reg,NO_COEF=NO_COEF,            &
+  &   iNOTupdateORB=iNOTupdateORB)
  else
    !write(*,*) 'running NOFT module from C++ (restart)'
    call run_noft(INOF,Ista,NBF_tot,NBF_occ,Nfrozen,Npairs,Ncoupled,Nbeta_elect,Nalpha_elect, &
   &   imethocc,imethorb,itermax,iprintdmn,iprintswdmn,iprintints,itolLambda,ndiis,           &
-  &   Enof,tolE,Vnn,Overlap,Occ,mo_ints_c,ofile_name,NO_COEF=NO_COEF,restart=.true.,         &
-  &   ireadGAMMAS=ireadGAMMAS,ireadOCC=ireadocc,ireadCOEF=ireadCOEF,ireadFdiag=ireadFdiag,   &
-  &   iNOTupdateOCC=iNOTupdateocc,iNOTupdateORB=iNOTupdateORB)
+  &   Enof,tolE,Vnn,Overlap,Occ,mo_ints_c,ofile_name,s_reg=s_reg,NO_COEF=NO_COEF,            &
+  &   restart=.true.,ireadGAMMAS=ireadGAMMAS,ireadOCC=ireadocc,ireadCOEF=ireadCOEF,          &
+  &   ireadFdiag=ireadFdiag,iNOTupdateOCC=iNOTupdateocc,iNOTupdateORB=iNOTupdateORB)
  endif
 
  ! Transfer optimized coefs
