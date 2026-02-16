@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
  int restart,ireadGAMMAS,ireadOCC,ireadCOEF,ireadFdiag,iNOTupdateOCC,iNOTupdateORB;
  int iguess,ifort_fcidump,iskip_fcidump,istyle_fcidump;
  int iorb,jorb,korb;
- double Enof,tolE,Vnn;
+ double Enof,tolE,Vnn,s_reg;
  double *Occ,*NO_COEF,*Overlap,*dm1;
  double **Cguess,**TMP_MAT;
  string line;
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
  Nfrozen=0;Npairs=0;Ncoupled=1;Nbeta_elect=0;Nalpha_elect=0;
  imethocc=1;imethorb=0;itermax=10000;iprintdmn=0;iprintswdmn=0;iprintints=0;
  itolLambda=5;ndiis=5;restart=0;ifort_fcidump=0;iskip_fcidump=0,istyle_fcidump=0;
- tolE=1e-9;Vnn=zero;Enof=zero;
+ tolE=1e-9;Vnn=zero;Enof=zero;s_reg=1e8;
 
  if(argc!=8)
  {
@@ -169,7 +169,7 @@ int main(int argc, char *argv[])
  // Call the module
  run_noft_c(&INOF,&Ista,&NBF_tot,&NBF_occ,&Nfrozen,&Npairs,&Ncoupled,&Nbeta_elect,&Nalpha_elect,
             &imethocc,&imethorb,&itermax,&iprintdmn,&iprintswdmn,&iprintints,&itolLambda,&ndiis,
-            &Enof,&tolE,&Vnn,Occ,Overlap,NO_COEF,&restart,&ireadGAMMAS,&ireadOCC,&ireadCOEF,
+            &Enof,&tolE,&Vnn,&s_reg,Occ,Overlap,NO_COEF,&restart,&ireadGAMMAS,&ireadOCC,&ireadCOEF,
             &ireadFdiag,&iNOTupdateOCC,&iNOTupdateORB,&ifort_fcidump,&iskip_fcidump,&istyle_fcidump);
  
  // Compute the density matrix in the orginal basis (we will use hCORE_tran as a temporary array)
