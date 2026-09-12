@@ -7,7 +7,7 @@ testF90:
 	gfortran -O2 -c ../m_nofoutput.F90
 	gfortran -O2 -c ../m_definitions.F90
 	gfortran -O2 -c ../m_fcidump_nof.F90
-	gfortran -O2 -c ../m_lbfgs_intern.F
+	gfortran -O2 -c ../m_lbfgs_intern.F90
 	gfortran -O2 -c ../m_integd.F90
 	gfortran -O2 -c ../m_rdmd.F90
 	gfortran -O2 -c ../m_anti2unit.F90
