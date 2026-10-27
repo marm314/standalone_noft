@@ -34,6 +34,7 @@ module m_rdmd
   logical::GAMMAs_nread=.true.     ! Are GAMMAS read from previous calc.?
   logical::t_amplitudes_nread=.true. ! Are t-amplitudes read from previous calc.?
   logical::z_amplitudes_nread=.true. ! Are z-amplitudes read from previous calc.?
+  logical::pccd_fixed_occs=.false. ! pCCD with fixed occs. (READ_OCCUPANCIES): t,z built from pccd_window_occ and kept fixed
   integer::irange_sep=0            ! rs-NOFT calcs. 0=no, 1=intra, 2=ex_corr
   integer::INOF=8                  ! Functional to use (5-> PNOF5, 7-> PNOF7, 8-> GNOF, etc)
   integer::Ista=0                  ! Use PNOF7s or only static/non-dyn part of GNOF with Ista=1 or 3
@@ -54,6 +55,7 @@ module m_rdmd
   real(dp)::Hcut=0.02d0*dsqrt(two) ! Hcut parameter defined in GNOF to determine the Ecorr type (i.e. dyn or nondyn)
 ! arrays 
   real(dp),allocatable,dimension(:)::occ,chempot_orb,occ_dyn
+  real(dp),allocatable,dimension(:)::pccd_window_occ ! pCCD fixed occs. in [0:1] of the Nfrozen+1:NBF_occ window
   real(dp),allocatable,dimension(:)::GAMMAs_old
   real(dp),allocatable,dimension(:)::DM2_J,DM2_K,DM2_L,DM2_iiii
   real(dp),allocatable,dimension(:)::DM2_Jsr,DM2_Lsr

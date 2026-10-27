@@ -266,6 +266,17 @@ subroutine run_noft(INOF_in,Ista_in,NBF_tot_in,NBF_occ_in,Nfrozen_in,Npairs_in,&
   call write_output(msg)
  endif
 
+ ! pCCD with fixed occs. (READ_OCCUPANCIES): the t,z amplitudes are built from the input occs. (in [0:2]) and kept fixed
+ if(RDMd%INOF==-1 .and. present(ireadocc)) then
+  if(ireadocc==1) then
+   allocate(RDMd%pccd_window_occ(RDMd%NBF_occ-RDMd%Nfrozen))
+   RDMd%pccd_window_occ(:)=half*occ_inout(RDMd%Nfrozen+1:RDMd%NBF_occ)
+   RDMd%pccd_fixed_occs=.true.
+   write(msg,'(a)') 'pCCD t,z amplitudes built from the input occupancies and kept fixed'
+   call write_output(msg)
+  endif
+ endif
+
  ! occ optimization using guess orbs. (HF, CORE, etc). First check if we have to update occs. or keep them fixed
  if(present(iNOTupdateocc)) then
   if(iNOTupdateocc==1) then
