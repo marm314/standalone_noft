@@ -53,7 +53,8 @@ the initialization parameters are
     Nbeta_elect=Number of beta electrons (N/2 for spin compensated systems)
     Nalpha_elect=Number of beta electrons (N/2 for spin compensated systems)
     iERItyp=Index organization used to decide the electron rep. integrals (ERIs) type ({ij|lk}, <ij|kl>, and (ik|jl))
-    imethocc=Method used for OCC opt. L-BFGS (1)
+    imethocc=Method used for OCC opt. L-BFGS (1). For pCCD (INOF=-1) the t,z amplitude solver: DIIS (0, default, or 2), Newton (1), Newton-Krylov (3), Levenberg-Marquardt (4), L-BFGS (5)
+              With pCCD and ireadOCC=1, t,z are built from the input Occ array (values in [0:2]) and kept fixed
     imethorb=Method used to opt. orbs. currently only F_diag (1)
     itermax=Max. number of global iters
     iprintdmn=Print opt. 1,2-DMNs 
