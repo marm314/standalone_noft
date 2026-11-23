@@ -371,12 +371,18 @@ subroutine pccd_jac(mode,ELAGd,RDMd,INTEGd,nAmp,x,Jt,Jac)
  real(dp),dimension(nAmp),intent(in)::x
  real(dp),dimension(nAmp,nAmp),intent(in)::Jt
  real(dp),dimension(nAmp,nAmp),intent(out)::Jac
+!Local variables ------------------------------
+ integer::iorb1
 !************************************************************************
  if(mode==1) then
   call vec_to_mat(x,RDMd%t_pccd_old,RDMd%Npairs,RDMd%NBF_occ-(RDMd%Nfrozen+RDMd%Npairs))
   call Grad_r_wrt_t(ELAGd,RDMd,INTEGd,Jac,RDMd%Npairs,RDMd%NBF_occ-(RDMd%Nfrozen+RDMd%Npairs))
  else
-  Jac=transpose(Jt)
+!$omp parallel do schedule(static) default(shared) private(iorb1)
+  do iorb1=1,nAmp
+   Jac(:,iorb1)=Jt(iorb1,:)
+  enddo
+!$omp end parallel do
  endif
 end subroutine pccd_jac
 !!***
@@ -956,10 +962,12 @@ subroutine Grad_r_wrt_t(ELAGd,RDMd,INTEGd,Grad_res_wrt_tia,nOcc,nVir)
  Grad_res_wrt_tia=zero
 
  ! d r_ia / d t_kd
- ! Residue r_ia = r_iorb,iorb1
+ ! Residue r_ia = r_iorb,iorb1 (each (i,a) pair fills its own row of the Jacobian -> no races)
+!$omp parallel do collapse(2) schedule(static) default(shared) &
+!$omp private(iorb,iorb1,iorb2,iorb3,iorb4,iorb5,iorbi,iorba,iorbk,iorbd,index_ia,index_jb,sum_tmp)
  do iorb=1,nOcc
-  iorbi=iorb+RDMd%Nfrozen
   do iorb1=1,nVir
+   iorbi=iorb+RDMd%Nfrozen
    iorba=iorb1+nOcc+RDMd%Nfrozen
    index_ia=iorb1+(iorb-1)*nVir
    ! d r_iorb,iorb1 / d t_iorb2,iorb3 with t_kd = t_iorb2,iorb3
@@ -1062,6 +1070,7 @@ subroutine Grad_r_wrt_t(ELAGd,RDMd,INTEGd,Grad_res_wrt_tia,nOcc,nVir)
    enddo
   enddo
  enddo
+!$omp end parallel do
 
 end subroutine Grad_r_wrt_t
 !!***
@@ -1100,9 +1109,10 @@ subroutine calc_t_residues(ELAGd,RDMd,INTEGd,y_ij)
 
  ! Build intermediate y_ij = sum_b v_bb^jj t_i^b 
  y_ij=zero 
+!$omp parallel do collapse(2) schedule(static) default(shared) private(iorb,iorb1,iorb2,iorb3,iorb4,iorb5)
  do iorb=1,RDMd%Npairs ! Occ
-  iorb1=iorb+RDMd%Nfrozen
   do iorb2=1,RDMd%Npairs ! Occ
+   iorb1=iorb+RDMd%Nfrozen
    iorb3=iorb2+RDMd%Nfrozen
    do iorb4=1,RDMd%NBF_occ-(RDMd%Nfrozen+RDMd%Npairs) ! Virt
     iorb5=iorb4+RDMd%Nfrozen+RDMd%Npairs
@@ -1114,12 +1124,14 @@ subroutine calc_t_residues(ELAGd,RDMd,INTEGd,y_ij)
    enddo
   enddo
  enddo
+!$omp end parallel do
 
  ! Build the t residue
  RDMd%tz_residue=zero
+!$omp parallel do collapse(2) schedule(static) default(shared) private(iorb,iorb1,iorb2,iorb3,iorb4,iorb5,sum_tmp)
  do iorb=1,RDMd%Npairs ! Occ
-  iorb1=iorb+RDMd%Nfrozen
   do iorb2=1,RDMd%NBF_occ-(RDMd%Nfrozen+RDMd%Npairs) ! Virt
+   iorb1=iorb+RDMd%Nfrozen
    iorb3=iorb2+RDMd%Nfrozen+RDMd%Npairs
    if(INTEGd%complex_ints) then
     RDMd%tz_residue(iorb,iorb2)=real(INTEGd%ERImol_cmplx(iorb1,iorb3,iorb3,iorb1))
@@ -1163,6 +1175,7 @@ subroutine calc_t_residues(ELAGd,RDMd,INTEGd,y_ij)
    RDMd%tz_residue(iorb,iorb2)=RDMd%tz_residue(iorb,iorb2)+sum_tmp
   enddo
  enddo
+!$omp end parallel do
 
 end subroutine calc_t_residues
 !!***
